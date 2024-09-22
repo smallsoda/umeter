@@ -17,6 +17,7 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
+#include <params.h>
 #include "main.h"
 #include "cmsis_os.h"
 
@@ -88,6 +89,7 @@ xQueueHandle logger_queue;
 
 uint8_t uartb[UART_BUFFER_SIZE];
 
+params_t params;
 struct sim800l mod;
 
 /* USER CODE END PV */
@@ -165,6 +167,13 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  //
+  params_init();
+  params_get(&params);
+
+  //
+  sim800l_init(&mod, &huart1, RST_GPIO_Port, RST_Pin, params.apn);
+
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -200,7 +209,6 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
-  sim800l_init(&mod, &huart1, RST_GPIO_Port, RST_Pin, "internet");
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */

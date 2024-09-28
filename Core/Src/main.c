@@ -17,7 +17,6 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <params.h>
 #include "main.h"
 #include "cmsis_os.h"
 
@@ -28,6 +27,8 @@
 #include "task.h"
 
 #include "sim800l.h"
+#include "params.h"
+#include "w25q.h"
 
 /* USER CODE END Includes */
 
@@ -49,11 +50,13 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+SPI_HandleTypeDef hspi2;
+
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
-DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart1_tx;
 DMA_HandleTypeDef hdma_usart2_tx;
+DMA_HandleTypeDef hdma_usart2_rx;
 
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
@@ -100,6 +103,7 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_SPI2_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -115,20 +119,41 @@ void testTask(void *argument);
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
-	if (HAL_UARTEx_GetRxEventType(huart) == HAL_UART_RXEVENT_HT)
-		return;
+	if (huart == &huart2)
+	{
+		if (HAL_UARTEx_GetRxEventType(huart) == HAL_UART_RXEVENT_HT)
+			return;
 
-	sim800l_irq(&mod, (const char *) uartb, size);
-	HAL_UARTEx_ReceiveToIdle_DMA(huart, uartb, UART_BUFFER_SIZE);
+		// TODO: Remove after testing
+		if (size && uartb[0] == 0xFC)
+		{
+			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
+			HAL_UARTEx_ReceiveToIdle_DMA(huart, uartb, UART_BUFFER_SIZE);
+			return;
+		}
+
+		sim800l_irq(&mod, (const char *) uartb, size);
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, uartb, UART_BUFFER_SIZE);
+	}
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
+{
+	if (huart == &huart2)
+	{
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, uartb, UART_BUFFER_SIZE);
+	}
 }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if (huart != &huart2)
-		return;
-
 	BaseType_t woken = pdFALSE;
-	vTaskNotifyGiveFromISR(loggerTaskHandle, &woken);
+
+	if (huart == &huart1)
+	{
+		vTaskNotifyGiveFromISR(loggerTaskHandle, &woken);
+	}
 }
 
 /* USER CODE END 0 */
@@ -165,6 +190,7 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
+  MX_SPI2_Init();
   /* USER CODE BEGIN 2 */
 
   //
@@ -172,7 +198,7 @@ int main(void)
   params_get(&params);
 
   //
-  sim800l_init(&mod, &huart1, RST_GPIO_Port, RST_Pin, params.apn);
+  sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
 
   /* USER CODE END 2 */
 
@@ -269,6 +295,44 @@ void SystemClock_Config(void)
 }
 
 /**
+  * @brief SPI2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_SPI2_Init(void)
+{
+
+  /* USER CODE BEGIN SPI2_Init 0 */
+
+  /* USER CODE END SPI2_Init 0 */
+
+  /* USER CODE BEGIN SPI2_Init 1 */
+
+  /* USER CODE END SPI2_Init 1 */
+  /* SPI2 parameter configuration*/
+  hspi2.Instance = SPI2;
+  hspi2.Init.Mode = SPI_MODE_MASTER;
+  hspi2.Init.Direction = SPI_DIRECTION_2LINES;
+  hspi2.Init.DataSize = SPI_DATASIZE_8BIT;
+  hspi2.Init.CLKPolarity = SPI_POLARITY_LOW;
+  hspi2.Init.CLKPhase = SPI_PHASE_1EDGE;
+  hspi2.Init.NSS = SPI_NSS_SOFT;
+  hspi2.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+  hspi2.Init.FirstBit = SPI_FIRSTBIT_MSB;
+  hspi2.Init.TIMode = SPI_TIMODE_DISABLE;
+  hspi2.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+  hspi2.Init.CRCPolynomial = 10;
+  if (HAL_SPI_Init(&hspi2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN SPI2_Init 2 */
+
+  /* USER CODE END SPI2_Init 2 */
+
+}
+
+/**
   * @brief USART1 Initialization Function
   * @param None
   * @retval None
@@ -284,7 +348,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
+  huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -317,7 +381,7 @@ static void MX_USART2_UART_Init(void)
 
   /* USER CODE END USART2_Init 1 */
   huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
+  huart2.Init.BaudRate = 9600;
   huart2.Init.WordLength = UART_WORDLENGTH_8B;
   huart2.Init.StopBits = UART_STOPBITS_1;
   huart2.Init.Parity = UART_PARITY_NONE;
@@ -347,9 +411,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
-  /* DMA1_Channel5_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
+  /* DMA1_Channel6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
   /* DMA1_Channel7_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel7_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel7_IRQn);
@@ -377,7 +441,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(RST_GPIO_Port, RST_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4|GPIO_PIN_5|RST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -386,12 +453,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : RST_Pin */
-  GPIO_InitStruct.Pin = RST_Pin;
+  /*Configure GPIO pins : SPI2_CS_Pin PB4 PB5 RST_Pin */
+  GPIO_InitStruct.Pin = SPI2_CS_Pin|GPIO_PIN_4|GPIO_PIN_5|RST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(RST_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -401,7 +468,7 @@ static void MX_GPIO_Init(void)
 
 void sim800lTask(void *argument)
 {
-	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, uartb, UART_BUFFER_SIZE);
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart2, uartb, UART_BUFFER_SIZE);
 
 	sim800l_task(&mod); // <- Infinite loop
 
@@ -418,7 +485,7 @@ void loggerTask(void *argument)
 	for (;;)
 	{
 		xQueueReceive(logger_queue, &string, portMAX_DELAY);
-		HAL_UART_Transmit_DMA(&huart2, (uint8_t *) string, strlen(string));
+		HAL_UART_Transmit_DMA(&huart1, (uint8_t *) string, strlen(string));
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		vPortFree(string);
 	}
@@ -465,6 +532,11 @@ void testTask(void *argument)
 	httpd.url = (char *) url;
 //	httpd.request = NULL;
 	httpd.request = (char *) request;
+
+	// Test W25Q
+	struct w25q mem;
+	w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
+	size_t cap = w25q_get_capacity(&mem);
 
 	for (;;)
 	{

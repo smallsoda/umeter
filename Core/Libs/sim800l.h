@@ -120,7 +120,7 @@ void sim800l_task(struct sim800l *mod);
 /*
  * @brief: Lock SIM800L in sleep state
  * @param mod: struct sim800l handle
- * @retval: 0 on success, -1 on failure (SIM800L is busy and can not to sleep)
+ * @retval: 0 on success, -1 on failure (SIM800L is busy and can not sleep)
  */
 int sim800l_sleep_lock(struct sim800l *mod);
 

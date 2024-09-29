@@ -152,11 +152,8 @@ void w25q_sector_erase(struct w25q *mem, uint32_t address)
 	cs_high(mem);
 
 	delay();
-
-	cs_low(mem);
 	while (spi_read_status_reg(mem, W25Q_CMD_READ_STATUS_REG1) &
 			W25Q_BUSY_FLAG_MASK);
-	cs_high(mem);
 }
 
 /******************************************************************************/
@@ -174,11 +171,8 @@ void w25q_block_erase(struct w25q *mem, uint32_t address)
 	cs_high(mem);
 
 	delay();
-
-	cs_low(mem);
 	while (spi_read_status_reg(mem, W25Q_CMD_READ_STATUS_REG1) &
 			W25Q_BUSY_FLAG_MASK);
-	cs_high(mem);
 }
 
 /******************************************************************************/
@@ -191,11 +185,8 @@ void w25q_chip_erase(struct w25q *mem)
 	cs_high(mem);
 
 	delay();
-
-	cs_low(mem);
 	while (spi_read_status_reg(mem, W25Q_CMD_READ_STATUS_REG1) &
 			W25Q_BUSY_FLAG_MASK);
-	cs_high(mem);
 }
 
 /******************************************************************************/
@@ -242,11 +233,8 @@ void w25q_write_data(struct w25q *mem, uint32_t address, uint8_t *data,
 	cs_high(mem);
 
 	delay();
-
-	cs_low(mem);
 	while (spi_read_status_reg(mem, W25Q_CMD_READ_STATUS_REG1) &
 			W25Q_BUSY_FLAG_MASK);
-	cs_high(mem);
 }
 
 

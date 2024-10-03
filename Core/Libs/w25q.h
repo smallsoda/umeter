@@ -35,5 +35,6 @@ void w25q_read_data(struct w25q *mem, uint32_t address, uint8_t *data,
 void w25q_write_data(struct w25q *mem, uint32_t address, uint8_t *data,
 		uint16_t size);
 size_t w25q_get_capacity(struct w25q *mem);
+uint8_t w25q_get_manufacturer_id(struct w25q *mem);
 
 #endif /* W25Q_H_ */

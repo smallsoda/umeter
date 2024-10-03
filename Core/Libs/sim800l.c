@@ -78,6 +78,9 @@ static void logger(uint8_t *data, size_t len)
 	BaseType_t status;
 	char *buf;
 
+	// TODO: Remove
+	return;
+
 	buf = pvPortMalloc(len + LOGGER_MS_SIZE + 3);
 	if (!buf)
 		for (;;); // TODO

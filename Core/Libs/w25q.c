@@ -237,9 +237,7 @@ void w25q_write_data(struct w25q *mem, uint32_t address, uint8_t *data,
 			W25Q_BUSY_FLAG_MASK);
 }
 
-
-// Get capacity in bytes
-//
+/******************************************************************************/
 size_t w25q_get_capacity(struct w25q *mem)
 {
 	uint32_t capacity = spi_read_id(mem) & 0xFF;
@@ -269,4 +267,10 @@ size_t w25q_get_capacity(struct w25q *mem)
 	default:
 		return 0;
 	}
+}
+
+/******************************************************************************/
+uint8_t w25q_get_manufacturer_id(struct w25q *mem)
+{
+	return spi_read_id(mem) >> 16;
 }

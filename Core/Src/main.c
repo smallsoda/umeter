@@ -27,8 +27,12 @@
 #include "task.h"
 
 #include "sim800l.h"
+#include "updater.h"
 #include "params.h"
 #include "w25q.h"
+
+// TODO: Replace
+#include "fws.h"
 
 /* USER CODE END Includes */
 
@@ -55,6 +59,7 @@ SPI_HandleTypeDef hspi2;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart1_tx;
+DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart2_tx;
 DMA_HandleTypeDef hdma_usart2_rx;
 
@@ -88,12 +93,28 @@ const osThreadAttr_t testTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 
+osThreadId_t updaterTaskHandle;
+const osThreadAttr_t updaterTask_attributes = {
+  .name = "updaterTask",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
+// TODO: Replace
+volatile struct bl_params bl __attribute__((section(".noinit")));
+
 xQueueHandle logger_queue;
 
+uint8_t uarta[UART_BUFFER_SIZE];
 uint8_t uartb[UART_BUFFER_SIZE];
 
 params_t params;
+struct w25q mem;
 struct sim800l mod;
+struct updater upd;
+
+extern const uint32_t *_app;
+#define APP_ADDRESS ((uint32_t) &_app)
 
 /* USER CODE END PV */
 
@@ -111,6 +132,7 @@ void StartDefaultTask(void *argument);
 void sim800lTask(void *argument);
 void loggerTask(void *argument);
 void testTask(void *argument);
+void updaterTask(void *argument);
 
 /* USER CODE END PFP */
 
@@ -119,18 +141,18 @@ void testTask(void *argument);
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
-	if (huart == &huart2)
+	if (huart == &huart1)
 	{
 		if (HAL_UARTEx_GetRxEventType(huart) == HAL_UART_RXEVENT_HT)
 			return;
 
-		// TODO: Remove after testing
-		if (size && uartb[0] == 0xFC)
-		{
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
-			HAL_UARTEx_ReceiveToIdle_DMA(huart, uartb, UART_BUFFER_SIZE);
+		updater_irq(&upd, (const char *) uarta, size);
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, uarta, UART_BUFFER_SIZE);
+	}
+	else if (huart == &huart2)
+	{
+		if (HAL_UARTEx_GetRxEventType(huart) == HAL_UART_RXEVENT_HT)
 			return;
-		}
 
 		sim800l_irq(&mod, (const char *) uartb, size);
 		HAL_UARTEx_ReceiveToIdle_DMA(huart, uartb, UART_BUFFER_SIZE);
@@ -139,7 +161,12 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-	if (huart == &huart2)
+	if (huart == &huart1)
+	{
+		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, uarta, UART_BUFFER_SIZE);
+	}
+	else if (huart == &huart2)
 	{
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET);
 		HAL_UARTEx_ReceiveToIdle_DMA(huart, uartb, UART_BUFFER_SIZE);
@@ -166,6 +193,9 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
+
+  SCB->VTOR = APP_ADDRESS;
+  __enable_irq();
 
   /* USER CODE END 1 */
 
@@ -198,6 +228,8 @@ int main(void)
   params_get(&params);
 
   //
+  w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
+  updater_init(&upd, &mem, &huart1);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
 
   /* USER CODE END 2 */
@@ -230,6 +262,7 @@ int main(void)
   sim800lTaskHandle = osThreadNew(sim800lTask, NULL, &sim800lTask_attributes);
   loggerTaskHandle = osThreadNew(loggerTask, NULL, &loggerTask_attributes);
   testTaskHandle = osThreadNew(testTask, NULL, &testTask_attributes);
+  updaterTaskHandle = osThreadNew(updaterTask, NULL, &updaterTask_attributes);
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
@@ -411,6 +444,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+  /* DMA1_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
   /* DMA1_Channel6_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);
@@ -533,10 +569,13 @@ void testTask(void *argument)
 //	httpd.request = NULL;
 	httpd.request = (char *) request;
 
-	// Test W25Q
-	struct w25q mem;
-	w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
-	size_t cap = w25q_get_capacity(&mem);
+	// TODO: Remove
+	char *buf = pvPortMalloc(strlen((char *) bl.datetime) + 2 + 1);
+	if (!buf)
+		for(;;);
+	strcpy(buf, (char *) bl.datetime);
+	strcat(buf, "\r\n");
+	xQueueSendToBack(logger_queue, &buf, 0);
 
 	for (;;)
 	{
@@ -572,6 +611,18 @@ void testTask(void *argument)
 	}
 }
 
+void updaterTask(void *argument)
+{
+	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, uarta, UART_BUFFER_SIZE);
+
+	updater_task(&upd); // <- Infinite loop
+
+	for (;;)
+	{
+		osDelay(1);
+	}
+}
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -584,6 +635,15 @@ void testTask(void *argument)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+
+//	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+//	for(int i = 0; i < 10; i++)
+//	{
+//		osDelay(200);
+//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
+//		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
+//	}
+
   /* Infinite loop */
   for(;;)
   {

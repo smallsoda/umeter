@@ -9,9 +9,8 @@
 #include <string.h>
 #include "stm32f1xx_hal.h"
 
+extern const uint32_t *_storage;
 #define PARAMS_ADDRESS ((uint32_t) &_storage)
-
-extern const uint32_t _storage;
 
 
 inline static void flash_get(uint32_t address, size_t size, uint8_t *buffer)

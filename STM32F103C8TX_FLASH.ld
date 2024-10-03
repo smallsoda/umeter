@@ -44,11 +44,14 @@ _Min_Stack_Size = 0x1; /* required amount of stack */
 /* Memories definition */
 MEMORY
 {
-  RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 20K
-  FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 60K
-  STORAGE  (r)     : ORIGIN = 0x800F000,   LENGTH = 4K
+  NOINIT     (rw)  : ORIGIN = 0x20000000,   LENGTH = 0x0100
+  RAM        (xrw) : ORIGIN = 0x20000100,   LENGTH = 0x4F00
+  BOOTLOADER (rx)  : ORIGIN = 0x08000000,   LENGTH = 8K
+  FLASH      (rx)  : ORIGIN = 0x08002000,   LENGTH = 52K
+  STORAGE    (r)   : ORIGIN = 0x0800F000,   LENGTH = 4K
 }
 
+PROVIDE(_app = ORIGIN(FLASH));
 PROVIDE(_storage = ORIGIN(STORAGE));
 
 /* Sections */
@@ -177,6 +180,12 @@ SECTIONS
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
   } >RAM
+  
+  /* NOINIT */
+  .noinit (NOLOAD) :
+  {
+    *(.noinit*)
+  } >NOINIT
 
   /* Remove information from the compiler libraries */
   /DISCARD/ :

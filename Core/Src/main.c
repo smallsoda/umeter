@@ -30,6 +30,7 @@
 #include "updater.h"
 #include "params.h"
 #include "w25q.h"
+#include "ota.h"
 
 // TODO: Replace
 #include "fws.h"
@@ -75,7 +76,7 @@ const osThreadAttr_t defaultTask_attributes = {
 osThreadId_t sim800lTaskHandle;
 const osThreadAttr_t sim800lTask_attributes = {
   .name = "sim800lTask",
-  .stack_size = 512 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -100,6 +101,13 @@ const osThreadAttr_t updaterTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 
+osThreadId_t otaTaskHandle;
+const osThreadAttr_t otaTask_attributes = {
+  .name = "otaTask",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+
 // TODO: Replace
 volatile struct bl_params bl __attribute__((section(".noinit")));
 
@@ -112,6 +120,7 @@ params_t params;
 struct w25q mem;
 struct sim800l mod;
 struct updater upd;
+struct ota ota;
 
 extern const uint32_t *_app;
 #define APP_ADDRESS ((uint32_t) &_app)
@@ -133,6 +142,7 @@ void sim800lTask(void *argument);
 void loggerTask(void *argument);
 void testTask(void *argument);
 void updaterTask(void *argument);
+void otaTask(void *argument);
 
 /* USER CODE END PFP */
 
@@ -231,6 +241,7 @@ int main(void)
   w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   updater_init(&upd, &mem, &huart1);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
+  ota_init(&ota, &mod, &mem, params.url_ota);
 
   /* USER CODE END 2 */
 
@@ -263,6 +274,7 @@ int main(void)
   loggerTaskHandle = osThreadNew(loggerTask, NULL, &loggerTask_attributes);
   testTaskHandle = osThreadNew(testTask, NULL, &testTask_attributes);
   updaterTaskHandle = osThreadNew(updaterTask, NULL, &updaterTask_attributes);
+  otaTaskHandle = osThreadNew(otaTask, NULL, &otaTask_attributes);
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
@@ -601,7 +613,7 @@ void testTask(void *argument)
 			xQueueSendToBack(logger_queue, &httpd.response, portMAX_DELAY);
 
 			blink();
-			osDelay(5000);
+			osDelay(30000);
 		}
 		else
 		{
@@ -616,6 +628,16 @@ void updaterTask(void *argument)
 	HAL_UARTEx_ReceiveToIdle_DMA(&huart1, uarta, UART_BUFFER_SIZE);
 
 	updater_task(&upd); // <- Infinite loop
+
+	for (;;)
+	{
+		osDelay(1);
+	}
+}
+
+void otaTask(void *argument)
+{
+	ota_task(&ota); // <- Infinite loop
 
 	for (;;)
 	{

@@ -87,6 +87,7 @@ struct sim800l_http
 	char *url;
 	char *request;
 	char *response;
+	size_t rlen;
 
 	void *context;
 };

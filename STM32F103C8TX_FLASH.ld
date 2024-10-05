@@ -52,6 +52,7 @@ MEMORY
 }
 
 PROVIDE(_app = ORIGIN(FLASH));
+PROVIDE(_app_len = LENGTH(FLASH));
 PROVIDE(_storage = ORIGIN(STORAGE));
 
 /* Sections */

@@ -26,6 +26,7 @@
 
 // NOTE: Logger
 #define LOGGER_MS_SIZE 10
+#define LOGGER_MSG_MAX_SIZE 128
 extern xQueueHandle logger_queue;
 
 enum status
@@ -79,7 +80,10 @@ static void logger(uint8_t *data, size_t len)
 	char *buf;
 
 	// TODO: Remove
-	return;
+//	return;
+
+	if (len > LOGGER_MSG_MAX_SIZE)
+		len = LOGGER_MSG_MAX_SIZE;
 
 	buf = pvPortMalloc(len + LOGGER_MS_SIZE + 3);
 	if (!buf)
@@ -99,6 +103,8 @@ static void logger(uint8_t *data, size_t len)
 			buf[i] = 'r';
 		else if (buf[i] == '\n')
 			buf[i] = 'n';
+		else if ((buf[i] < 0x20) || (buf[i] > 0x7E))
+			buf[i] = '*';
 	}
 
 	status = xQueueSendToBack(logger_queue, &buf, 0);
@@ -392,10 +398,11 @@ static int parse_http_read(struct sim800l *mod, timeout_t timeout)
 			return -1;
 
 		p = end + strlen(ending);
-		if (!*p)
-			return -1;
+		end = (char *) &mod->rxb[mod->rxlen];
+		if (p > end)
+			continue;
 
-		if (((char *) &mod->rxb[mod->rxlen] - p) < len)
+		if ((end - p) < len)
 			continue;
 
 		data->response = pvPortMalloc(len + 1);
@@ -404,8 +411,47 @@ static int parse_http_read(struct sim800l *mod, timeout_t timeout)
 
 		memcpy(data->response, p, len);
 		data->response[len] = '\0';
+		data->rlen = len;
 
 		return len;
+	}
+
+	return -1;
+}
+
+// \r\n+HTTPSTATUS: POST,0,0,0\r\n\r\nOK\r\n
+// \r\nOK\r\n\r\n+HTTPSTATUS: GET,0,0,0\r\n\r\nOK\r\n
+// @retval: HTTP status on success or -1 on failure
+static int parse_http_status(struct sim800l *mod, timeout_t timeout)
+{
+	const char *header = "+HTTPSTATUS:";
+	const char *ending = "\r\nOK\r\n";
+	char *p, *end;
+	int status;
+
+	while (wait_for_any(mod, timeout))
+	{
+		mod->rxb[mod->rxlen] = '\0';
+
+		p = strstr((char *) mod->rxb, header);
+		if (!p)
+			continue;
+
+		end = strstr(p, ending);
+		if (!end)
+			continue;
+
+		p = strstr(p, ",");
+		if (!p)
+			return false;
+
+		p++;
+		if (!*p)
+			return false;
+
+		status = strtoul(p, NULL, 0);
+
+		return status;
 	}
 
 	return -1;
@@ -655,7 +701,7 @@ void sim800l_task(struct sim800l *mod)
 			}
 
 			transmit(mod, "AT+SAPBR=1,1");
-			if (!compare_buffer_beginning(mod, "\r\nOK\r\n", 5000))
+			if (!compare_buffer_beginning(mod, "\r\nOK\r\n", 20000))
 			{
 				state(mod, STATE_IDLE, STATUS_ERROR);
 				break;
@@ -747,11 +793,32 @@ void sim800l_task(struct sim800l *mod)
 				task_done(mod);
 			}
 
+			// TODO: Check in while loop with timeout
+			transmit(mod, "AT+HTTPSTATUS?");
+			if (parse_http_status(mod, 500))
+			{
+				state(mod, STATE_GPRS_DEINIT, STATUS_ERROR);
+				break;
+			}
+
 			transmit(mod, "AT+HTTPTERM");
 			if (!compare_buffer_beginning(mod, "\r\nOK\r\n", 2000))
 			{
-				state(mod, STATE_IDLE, STATUS_ERROR);
+				state(mod, STATE_GPRS_DEINIT, STATUS_ERROR);
 				break;
+			}
+
+			// Get the next task now
+			// Continue to send HTTP while connected to the Internet
+			if (mod->task.issue == ISSUE_IDLE)
+			{
+				// 50ms for tasks to create a new HTTP request
+				if (xQueueReceive(mod->queue, &mod->task, pdMS_TO_TICKS(50)))
+				{
+					mod->task_ticks = xTaskGetTickCount();
+					if (mod->task.issue == ISSUE_HTTP)
+						break;
+				}
 			}
 
 			state(mod, STATE_GPRS_DEINIT, STATUS_OK);

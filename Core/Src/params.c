@@ -10,7 +10,8 @@
 #include "stm32f1xx_hal.h"
 
 extern const uint32_t *_storage;
-#define PARAMS_ADDRESS ((uint32_t) &_storage)
+//#define PARAMS_ADDRESS ((uint32_t) &_storage)
+static uint32_t PARAMS_ADDRESS = ((uint32_t) &_storage);
 
 
 inline static void flash_get(uint32_t address, size_t size, uint8_t *buffer)
@@ -65,6 +66,7 @@ static void set_default(params_t *params)
 {
 	memset(params, 0, sizeof(params_t));
 	strcpy(params->apn, "internet");
+	strcpy(params->url_ota, "ota.proshutinsky.ru");
 }
 
 void params_init(void)

@@ -10,10 +10,10 @@
 
 #include "stm32f1xx_hal.h"
 
-#include "w25q.h"
-
 #include "cmsis_os.h"
 #include "stream_buffer.h"
+
+#include "w25q.h"
 
 #define UPDATER_PAYLOAD_SIZE 16
 

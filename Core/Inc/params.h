@@ -17,6 +17,8 @@
 #define GIT_COMMIT_HASH "-"
 #endif
 
+#define PARAMS_TIMESTAMP __TIMESTAMP__
+
 #define PARAMS_DEVICE_NAME "umeter-a1"
 #define PARAMS_FW_VERSION 3
 

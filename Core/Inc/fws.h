@@ -22,6 +22,7 @@
 #define FWS_CHECKSUM_INIT 0x5A5A5A5A
 
 #define FWS_BL_DATETIME_LEN 64
+#define FWS_BL_GIT_COMMIT_HASH_LEN 64
 
 
 enum fws_status
@@ -59,6 +60,7 @@ struct bl_params
 	uint32_t status;
 	uint32_t : 32;
 	uint8_t datetime[FWS_BL_DATETIME_LEN];
+	uint8_t hash[FWS_BL_GIT_COMMIT_HASH_LEN];
 };
 
 

@@ -25,9 +25,10 @@
 //#define DISABLE_RF
 
 // NOTE: Logger
+#include "logger.h"
 #define LOGGER_MS_SIZE 10
 #define LOGGER_MSG_MAX_SIZE 128
-extern xQueueHandle logger_queue;
+extern struct logger logger;
 
 enum status
 {
@@ -74,7 +75,7 @@ static void logger_add_ms(char *buffer)
 }
 
 // NOTE: Logger
-static void logger(uint8_t *data, size_t len)
+static void logger_add(uint8_t *data, size_t len)
 {
 	BaseType_t status;
 	char *buf;
@@ -107,7 +108,7 @@ static void logger(uint8_t *data, size_t len)
 			buf[i] = '*';
 	}
 
-	status = xQueueSendToBack(logger_queue, &buf, 0);
+	status = xQueueSendToBack(logger.queue, &buf, 0);
 	if (status != pdTRUE)
 		vPortFree(buf);
 }
@@ -173,7 +174,7 @@ static bool wait_for_any(struct sim800l *mod, timeout_t timeout)
 		return false;
 
 	// NOTE: Logger
-	logger(mod->rxb, mod->rxlen);
+	logger_add(mod->rxb, mod->rxlen);
 
 	return true;
 }
@@ -203,7 +204,7 @@ static bool wait_for_num(struct sim800l *mod, size_t num, timeout_t timeout)
 	}
 
 	// NOTE: Logger
-	logger(mod->rxb, mod->rxlen);
+	logger_add(mod->rxb, mod->rxlen);
 
 	if (mod->rxlen < num)
 		return false;
@@ -236,7 +237,7 @@ static void transmit_data(struct sim800l *mod, const uint8_t *buf, size_t len)
 	len++;
 
 	// NOTE: Logger
-	logger(mod->txb, len);
+	logger_add(mod->txb, len);
 
 	clear_rx_buffer(mod); // ?
 	while (HAL_UART_Transmit_DMA(mod->uart, mod->txb, len) == HAL_BUSY);
@@ -507,7 +508,7 @@ void sim800l_task(struct sim800l *mod)
 			state(mod, STATE_RESET, STATUS_OK);
 
 			// NOTE: Logger
-			logger((uint8_t *) "*", 1);
+			logger_add((uint8_t *) "*", 1);
 
 			break;
 
@@ -601,7 +602,7 @@ void sim800l_task(struct sim800l *mod)
 			}
 
 			// NOTE: Logger
-			logger((uint8_t *) "* SLEEP *", 9);
+			logger_add((uint8_t *) "* SLEEP *", 9);
 
 			// Wait for the task
 			xQueueReceive(mod->queue, &mod->task, portMAX_DELAY);

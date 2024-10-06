@@ -50,6 +50,7 @@ enum state
 	STATE_CREG,
 	STATE_GPRS_INIT,
 	STATE_GPRS_HTTP,
+	STATE_GPRS_HTTP_TERM,
 	STATE_GPRS_DEINIT,
 };
 
@@ -783,7 +784,7 @@ void sim800l_task(struct sim800l *mod)
 			transmit(mod, cmd);
 			if (parse_http_action(mod, NULL, 30000) != 200)
 			{
-				state(mod, STATE_IDLE, STATUS_ERROR);
+				state(mod, STATE_GPRS_HTTP_TERM, STATUS_ERROR);
 				break;
 			}
 
@@ -794,6 +795,10 @@ void sim800l_task(struct sim800l *mod)
 				task_done(mod);
 			}
 
+			state(mod, STATE_GPRS_HTTP_TERM, STATUS_OK);
+			break;
+
+		case STATE_GPRS_HTTP_TERM:
 			// TODO: Check in while loop with timeout
 			transmit(mod, "AT+HTTPSTATUS?");
 			if (parse_http_status(mod, 500))
@@ -818,7 +823,10 @@ void sim800l_task(struct sim800l *mod)
 				{
 					mod->task_ticks = xTaskGetTickCount();
 					if (mod->task.issue == ISSUE_HTTP)
+					{
+						state(mod, STATE_GPRS_HTTP, STATUS_OK);
 						break;
+					}
 				}
 			}
 

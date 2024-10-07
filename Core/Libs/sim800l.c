@@ -507,10 +507,6 @@ void sim800l_task(struct sim800l *mod)
 		{
 		case STATE_STARTUP:
 			state(mod, STATE_RESET, STATUS_OK);
-
-			// NOTE: Logger
-			logger_add((uint8_t *) "*", 1);
-
 			break;
 
 		case STATE_RESET:

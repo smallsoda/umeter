@@ -5,12 +5,12 @@
  * 2024
  */
 
-#include "umeter_tasks.h"
+#include "ptasks.h"
 
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "sim800l",
-  .stack_size = 256 * 4,
+  .stack_size = 96 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 

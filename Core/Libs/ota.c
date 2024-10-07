@@ -248,6 +248,12 @@ void ota_task(struct ota *ota)
 	int retries;
 	int ret;
 
+	if (w25q_get_manufacturer_id(ota->mem) != FWS_WINBOND_MANUFACTURER_ID)
+	{
+		vTaskDelete(NULL);
+		return; // Never be here
+	}
+
 	ota->task = xTaskGetCurrentTaskHandle();
 
 	http.url = pvPortMalloc(OTA_URL_SIZE + 64);

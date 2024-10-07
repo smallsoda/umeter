@@ -23,8 +23,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "umeter_tasks.h"
+#include "ptasks.h"
+
 #include "sim800l.h"
+#include "logger.h"
 #include "params.h"
 #include "w25q.h"
 #include "ota.h"
@@ -62,7 +64,7 @@ DMA_HandleTypeDef hdma_usart2_rx;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 64 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
@@ -174,7 +176,7 @@ int main(void)
   params_get(&params);
 
   // TODO
-  logger.queue = xQueueCreate(10, sizeof(void *));
+  logger.queue = xQueueCreate(16, sizeof(void *));
   logger.uart = &huart1;
   logger.task = NULL;
 
@@ -221,6 +223,7 @@ int main(void)
   task_sim800l(&mod);
   task_ota(&ota);
   task_app(&app);
+  task_info(&app);
   task_blink();
 
   /* add threads, ... */

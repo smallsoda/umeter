@@ -5,7 +5,7 @@
  * 2024
  */
 
-#include "umeter_tasks.h"
+#include "ptasks.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -48,63 +48,6 @@ static void blink(void)
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 }
 
-// TODO: Remove
-static void info(struct app *app)
-{
-	const char *header_bl  = " BL: ";
-	const char *header_app = "APP: ";
-	char *buf;
-
-	buf = pvPortMalloc(strlen(header_bl) +
-			strlen((char *) app->bl->datetime) + 3);
-	if (!buf)
-		for(;;);
-	strcpy(buf, header_bl);
-	strcat(buf, (char *) app->bl->datetime);
-	strcat(buf, "\r\n");
-	xQueueSendToBack(app->logger->queue, &buf, 0);
-
-	buf = pvPortMalloc(strlen(header_bl) + strlen((char *) app->bl->hash) + 3);
-	if (!buf)
-		for(;;);
-	strcpy(buf, header_bl);
-	strcat(buf, (char *) app->bl->hash);
-	strcat(buf, "\r\n");
-	xQueueSendToBack(app->logger->queue, &buf, 0);
-
-	buf = pvPortMalloc(strlen(header_app) + strlen(PARAMS_TIMESTAMP) + 3);
-	if (!buf)
-		for(;;);
-	strcpy(buf, header_app);
-	strcat(buf, PARAMS_TIMESTAMP);
-	strcat(buf, "\r\n");
-	xQueueSendToBack(app->logger->queue, &buf, 0);
-
-	buf = pvPortMalloc(strlen(header_app) + strlen(GIT_COMMIT_HASH) + 3);
-	if (!buf)
-		for(;;);
-	strcpy(buf, header_app);
-	strcat(buf, GIT_COMMIT_HASH);
-	strcat(buf, "\r\n");
-	xQueueSendToBack(app->logger->queue, &buf, 0);
-
-	buf = pvPortMalloc(strlen(header_app) + strlen(PARAMS_DEVICE_NAME) + 3);
-	if (!buf)
-		for(;;);
-	strcpy(buf, header_app);
-	strcat(buf, PARAMS_DEVICE_NAME);
-	strcat(buf, "\r\n");
-	xQueueSendToBack(app->logger->queue, &buf, 0);
-
-	buf = pvPortMalloc(strlen(header_app) + 32 + 3);
-	if (!buf)
-		for(;;);
-	strcpy(buf, header_app);
-	itoa(PARAMS_FW_VERSION, &buf[strlen(buf)], 10);
-	strcat(buf, "\r\n");
-	xQueueSendToBack(app->logger->queue, &buf, 0);
-}
-
 static void task(void *argument)
 {
 	struct app *app = argument;
@@ -120,8 +63,6 @@ static void task(void *argument)
 	httpd.url = (char *) url;
 //	httpd.request = NULL;
 	httpd.request = (char *) request;
-
-	info(app);
 
 	for (;;)
 	{

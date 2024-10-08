@@ -15,6 +15,9 @@
 #include "params.h"
 #include "fws.h"
 
+#include "logger.h"
+#define TAG "INFO"
+
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "info",
@@ -35,9 +38,9 @@ static void print_info_str(struct logger *logger, const char *header,
 	strcat(buf, sub);
 	strcat(buf, " ");
 	strcat(buf, data);
-	strcat(buf, "\r\n");
 
-	xQueueSendToBack(logger->queue, &buf, 0);
+	logger_add_str(logger, TAG, false, buf);
+	vPortFree(buf);
 }
 
 static void uid_string(char *uid)
@@ -56,26 +59,24 @@ static void info(struct app *app)
 {
 	char temp[32];
 
-	print_info_str(app->logger, "\r\n\r\ninfo:", "", "");
-
-	print_info_str(app->logger, "  BL", "-", (char *) app->bl->datetime);
-	print_info_str(app->logger, "  BL", "-", (char *) app->bl->hash);
+	print_info_str(app->logger, "BL", "-", (char *) app->bl->datetime);
+	print_info_str(app->logger, "BL", "-", (char *) app->bl->hash);
 	itoa(app->bl->status, temp, 10);
-	print_info_str(app->logger, "  BL", "-", temp);
+	print_info_str(app->logger, "BL", "-", temp);
 
-	print_info_str(app->logger, " APP", "-", PARAMS_TIMESTAMP);
-	print_info_str(app->logger, " APP", "-", GIT_COMMIT_HASH);
-	print_info_str(app->logger, " APP", "-", PARAMS_DEVICE_NAME);
+	print_info_str(app->logger, "APP", "-", PARAMS_TIMESTAMP);
+	print_info_str(app->logger, "APP", "-", GIT_COMMIT_HASH);
+	print_info_str(app->logger, "APP", "-", PARAMS_DEVICE_NAME);
 	itoa(PARAMS_FW_VERSION, temp, 10);
-	print_info_str(app->logger, " APP", "-", temp);
+	print_info_str(app->logger, "APP", "-", temp);
 	uid_string(temp);
-	print_info_str(app->logger, " APP", "-", temp);
+	print_info_str(app->logger, "APP", "-", temp);
 }
 
 static void task(void *argument)
 {
-	const char *t_names[] = {"defaultTask", "app", "blink", "info", "logger",
-			"ota", "sim800l", NULL};
+	const char *t_names[] = {
+			"def", "app", "blink", "info", "logger", "ota", "sim800l", NULL};
 	TaskHandle_t t_handle;
 	TaskStatus_t details;
 	char temp[16];

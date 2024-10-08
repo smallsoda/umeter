@@ -60,10 +60,10 @@ DMA_HandleTypeDef hdma_usart1_tx;
 DMA_HandleTypeDef hdma_usart2_tx;
 DMA_HandleTypeDef hdma_usart2_rx;
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
+/* Definitions for def */
+osThreadId_t defHandle;
+const osThreadAttr_t def_attributes = {
+  .name = "def",
   .stack_size = 64 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
@@ -93,7 +93,7 @@ static void MX_DMA_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI2_Init(void);
-void StartDefaultTask(void *argument);
+void task_default(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -175,19 +175,15 @@ int main(void)
   params_init();
   params_get(&params);
 
-  // TODO
-  logger.queue = xQueueCreate(16, sizeof(void *));
-  logger.uart = &huart1;
-  logger.task = NULL;
-
   //
+  logger_init(&logger, &huart1, 24);
   w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.url_ota);
 
-  // TODO
-  app.mod = &mod;
+  //
   app.logger = &logger;
+  app.mod = &mod;
   app.bl = &bl;
 
   //
@@ -215,13 +211,13 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of def */
+  defHandle = osThreadNew(task_default, NULL, &def_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   task_logger(&logger);
   task_sim800l(&mod);
-  task_ota(&ota);
+//  task_ota(&ota); // TODO: Uncomment
   task_app(&app);
   task_info(&app);
   task_blink();
@@ -464,14 +460,14 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_task_default */
 /**
   * @brief  Function implementing the defaultTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_task_default */
+void task_default(void *argument)
 {
   /* USER CODE BEGIN 5 */
 

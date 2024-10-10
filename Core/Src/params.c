@@ -7,6 +7,7 @@
 
 #include <params.h>
 #include <string.h>
+#include <stdlib.h>
 #include "stm32f1xx_hal.h"
 
 extern const uint32_t *_storage;
@@ -61,12 +62,27 @@ void params_set(params_t *params)
 	flash_set(PARAMS_ADDRESS, sizeof(params_t), (uint8_t *) params);
 }
 
+static void uid_string(char *uid)
+{
+	char temp[16];
+
+	utoa(HAL_GetUIDw0(), temp, 16);
+	strcpy(uid, temp);
+	utoa(HAL_GetUIDw1(), temp, 16);
+	strcat(uid, temp);
+	utoa(HAL_GetUIDw2(), temp, 16);
+	strcat(uid, temp);
+}
+
 // Do not edit magic and id
 static void set_default(params_t *params)
 {
 	memset(params, 0, sizeof(params_t));
 	strcpy(params->apn, "internet");
 	strcpy(params->url_ota, "ota.proshutinsky.ru");
+	strcpy(params->url_app, "app.proshutinsky.ru");
+	uid_string(params->mcu_uid);
+	params->period = 60 * 10;
 }
 
 void params_init(void)

@@ -17,13 +17,16 @@
 #define GIT_COMMIT_HASH "-"
 #endif
 
-#define PARAMS_TIMESTAMP __TIMESTAMP__
+#define PARAMS_DATETIME __TIMESTAMP__
 
 #define PARAMS_DEVICE_NAME "umeter-a1"
-#define PARAMS_FW_VERSION 4
+#define PARAMS_FW_VERSION 5
 
 #define PARAMS_MAGIC_EMPTY 0xFFFFFFFF
-#define PARAMS_MAGIC_VALID 0xAA550003
+#define PARAMS_MAGIC_VALID 0xAA550004
+
+#define PARAMS_APP_URL_SIZE 64
+#define PARAMS_MCU_UID_SIZE 32
 
 typedef struct
 {
@@ -33,6 +36,9 @@ typedef struct
 
 	char apn[SIM800L_APN_SIZE];
 	char url_ota[OTA_URL_SIZE];
+	char url_app[PARAMS_APP_URL_SIZE];
+	char mcu_uid[PARAMS_MCU_UID_SIZE];
+	uint32_t period;
 } __attribute__((aligned(8))) params_t;
 
 void params_get(params_t *params);

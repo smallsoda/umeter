@@ -56,51 +56,94 @@ static void task(void *argument)
 {
 	struct app *app = argument;
 
-	const char *url = "echo.free.beeceptor.com";
 	struct sim800l_voltage vd;
 	struct sim800l_http httpd;
+	char *request;
+	char *url;
 	int status;
 
-	char *request = pvPortMalloc(256);
+	request = pvPortMalloc(512);
+	if (!request)
+		vTaskDelete(NULL);
+
+	url = pvPortMalloc(PARAMS_APP_URL_SIZE + 32);
 	if (!request)
 		vTaskDelete(NULL);
 
 	vd.context = &status;
 	httpd.context = &status;
-	httpd.url = (char *) url;
-//	httpd.request = NULL;
+//	httpd.url = app->params->url_app;
+	httpd.url = url;
+//	httpd.request = request;
+	httpd.request = NULL;
+
+	strcpy(url, app->params->url_app);
+	strcat(url, "/api/gettime");
+
+	sim800l_http(app->mod, &httpd, http_callback, 60000);
+	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+	// TODO: Use JSON response
+	if (!status)
+	{
+		*app->timestamp = strtoul(httpd.response, NULL, 0);
+		logger_add_str(app->logger, TAG, false, httpd.response);
+	}
+	if (httpd.response)
+		vPortFree(httpd.response);
+
+	//
+	strcpy(url, app->params->url_app);
 	httpd.request = request;
+
+	strjson_init(request);
+	strjson_uint(request, "ts", *app->timestamp);
+	strjson_str(request, "name", PARAMS_DEVICE_NAME);
+	strjson_str(request, "bl_git", (char *) app->bl->hash);
+	strjson_str(request, "bl_dt", (char *) app->bl->datetime);
+	strjson_uint(request, "bl_status", app->bl->status);
+	strjson_str(request, "app_git", GIT_COMMIT_HASH);
+	strjson_str(request, "app_dt", PARAMS_DATETIME);
+	strjson_uint(request, "app_ver", PARAMS_FW_VERSION);
+	strjson_str(request, "mcu", app->params->mcu_uid);
+	strjson_str(request, "apn", app->params->apn);
+	strjson_str(request, "url_ota", app->params->url_ota);
+	strjson_str(request, "url_app", app->params->url_app);
+	strjson_uint(request, "period", app->params->period);
+
+	sim800l_http(app->mod, &httpd, http_callback, 60000);
+	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+	// TODO: Parse JSON response
+
+	if (httpd.response)
+		vPortFree(httpd.response);
 
 	for (;;)
 	{
 		sim800l_voltage(app->mod, &vd, voltage_callback, 60000);
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-		if (!status)
-		{
-			strjson_init(request);
-			strjson_str(request, "status", "ok");
-			strjson_str(request, "name", PARAMS_DEVICE_NAME);
-			strjson_int(request, "battery", vd.voltage);
-		}
-		else
-		{
-			strjson_init(request);
-			strjson_str(request, "status", "err");
-			strjson_str(request, "name", PARAMS_DEVICE_NAME);
-			strjson_int(request, "battery", 0);
-		}
+		if (status)
+			vd.voltage = 0;
+
+		strjson_init(request);
+		strjson_uint(request, "ts", *app->timestamp);
+		strjson_uint(request, "ticks", xTaskGetTickCount());
+		strjson_int(request, "bat", vd.voltage);
+		strjson_null(request, "temp");
+		strjson_null(request, "count");
 
 		sim800l_http(app->mod, &httpd, http_callback, 60000);
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-		if (!status)
-			logger_add(app->logger, TAG, true, httpd.response, httpd.rlen);
+		// TODO: Parse JSON response
 
-		vPortFree(httpd.response);
+		if (httpd.response)
+			vPortFree(httpd.response);
 
 		blink();
-		osDelay(30000);
+		osDelay(app->params->period * 1000);
 	}
 }
 

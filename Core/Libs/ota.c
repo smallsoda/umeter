@@ -160,9 +160,9 @@ static int request_file(struct ota *ota, struct sim800l_http *http,
 	strcat(http->url, "/api/file?file=");
 	strcat(http->url, filename);
 	strcat(http->url, "&addr=");
-	itoa(addr, &http->url[strlen(http->url)], 10);
+	utoa(addr, &http->url[strlen(http->url)], 10);
 	strcat(http->url, "&size=");
-	itoa(size, &http->url[strlen(http->url)], 10);
+	utoa(size, &http->url[strlen(http->url)], 10);
 	http->request = NULL;
 	http->response = NULL;
 	http->context = &ota->task;
@@ -262,7 +262,7 @@ void ota_task(struct ota *ota)
 
 	for (;;)
 	{
-		osDelay(10000); // TODO: Increase
+		osDelay(30 * 60 * 1000); // TODO: Increase
 
 		// Request firmware list
 		ret = request_list(ota, &http);

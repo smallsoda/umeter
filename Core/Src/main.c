@@ -23,11 +23,13 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "ptasks.h"
+#include "timers.h"
 
 #include "sim800l.h"
+#include "ptasks.h"
 #include "logger.h"
 #include "params.h"
+#include "atomic.h"
 #include "w25q.h"
 #include "ota.h"
 #include "fws.h"
@@ -69,7 +71,13 @@ const osThreadAttr_t def_attributes = {
 };
 /* USER CODE BEGIN PV */
 
+
 volatile struct bl_params bl __attribute__((section(".noinit")));
+
+StaticTimer_t hz_timer_buf;
+TimerHandle_t hz_timer_handle;
+
+volatile uint32_t timestamp;
 
 uint8_t uart[UART_BUFFER_SIZE];
 
@@ -131,6 +139,12 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 	}
 }
 
+void hz_callback(TimerHandle_t timer)
+{
+	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4); // TODO: Remove
+	atomic_inc(&timestamp);
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -182,6 +196,8 @@ int main(void)
   ota_init(&ota, &mod, &mem, params.url_ota);
 
   //
+  app.timestamp = &timestamp;
+  app.params = &params;
   app.logger = &logger;
   app.mod = &mod;
   app.bl = &bl;
@@ -204,6 +220,11 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
+
+  hz_timer_handle = xTimerCreateStatic("hz", pdMS_TO_TICKS(1000), pdTRUE,
+		  (void *) 0, hz_callback, &hz_timer_buf);
+  xTimerStart(hz_timer_handle, 0);
+
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */

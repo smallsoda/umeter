@@ -697,7 +697,7 @@ void sim800l_task(struct sim800l *mod)
 				}
 
 				strcpy(cmd, "AT+HTTPDATA=");
-				itoa(get_http_request_len(mod), &cmd[strlen(cmd)], 10);
+				utoa(get_http_request_len(mod), &cmd[strlen(cmd)], 10);
 				strcat(cmd, ",1000");
 				transmit(mod, cmd);
 				if (!compare_buffer_beginning(mod, "\r\nDOWNLOAD\r\n", 1000))

@@ -10,13 +10,17 @@
 
 #include "sim800l.h"
 #include "logger.h"
+#include "params.h"
 #include "ota.h"
 
 struct app
 {
 	struct sim800l *mod;
 	struct logger *logger;
+
+	volatile uint32_t *timestamp;
 	volatile struct bl_params *bl;
+	params_t *params;
 };
 
 

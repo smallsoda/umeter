@@ -60,7 +60,7 @@ int logger_add(struct logger *logger, const char *tag, bool big,
 	if (!big && len > MAX_DATA_LEN)
 		len = MAX_DATA_LEN;
 
-	itoa(xTaskGetTickCount(), ticks, 10);
+	utoa(xTaskGetTickCount(), ticks, 10);
 
 	ll = strlen(tag) + 1 + strlen(ticks) + 1 + len + 2 + 1;
 	log = pvPortMalloc(ll);

@@ -238,7 +238,7 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   task_logger(&logger);
   task_sim800l(&mod);
-//  task_ota(&ota); // TODO: Uncomment
+  task_ota(&ota);
   task_app(&app);
   task_info(&app);
   task_blink();

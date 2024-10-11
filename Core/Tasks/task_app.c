@@ -9,6 +9,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+
+#define JSMN_HEADER
+#include "jsmn.h"
+
 #include "strjson.h"
 #include "params.h"
 #include "main.h"
@@ -17,12 +21,15 @@
 #include "logger.h"
 #define TAG "APP"
 
+#define JSON_MAX_TOKENS 8
+
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "app",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
+
 
 static void voltage_callback(int status, void *data)
 {
@@ -52,6 +59,41 @@ static void blink(void)
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 }
 
+// https://github.com/zserge/jsmn/blob/master/example/simple.c
+static int jsoneq(const char *json, jsmntok_t *tok, const char *s)
+{
+	if (tok->type == JSMN_STRING && (int) strlen(s) == tok->end - tok->start &&
+			strncmp(json + tok->start, s, tok->end - tok->start) == 0)
+		return 0;
+	return -1;
+}
+
+static int parse_json_time(const char *response, uint32_t *ts)
+{
+	jsmn_parser parser;
+	jsmntok_t tokens[JSON_MAX_TOKENS];
+	int ret;
+
+	memset(tokens, 0, sizeof(tokens));
+	jsmn_init(&parser);
+	ret = jsmn_parse(&parser, response, strlen(response), tokens,
+			JSON_MAX_TOKENS);
+
+	if (ret <= 0)
+		return -1;
+
+	if (tokens[0].type != JSMN_OBJECT)
+		return -1;
+
+	for (int i = 1; (i + 1) < ret; i += 2)
+	{
+		if (jsoneq(response, &tokens[i], "ts") == 0)
+			*ts = strtoul(response + tokens[i + 1].start, NULL, 0);
+	}
+
+	return 0;
+}
+
 static void task(void *argument)
 {
 	struct app *app = argument;
@@ -61,6 +103,7 @@ static void task(void *argument)
 	char *request;
 	char *url;
 	int status;
+	int ret;
 
 	request = pvPortMalloc(512);
 	if (!request)
@@ -72,30 +115,30 @@ static void task(void *argument)
 
 	vd.context = &status;
 	httpd.context = &status;
-//	httpd.url = app->params->url_app;
-	httpd.url = url;
-//	httpd.request = request;
-	httpd.request = NULL;
 
+	// <- /api/time
 	strcpy(url, app->params->url_app);
-	strcat(url, "/api/gettime");
+	strcat(url, "/api/time");
+	httpd.url = url;
+	httpd.request = NULL;
+	httpd.response = NULL;
 
 	sim800l_http(app->mod, &httpd, http_callback, 60000);
 	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-	// TODO: Use JSON response
 	if (!status)
 	{
-		*app->timestamp = strtoul(httpd.response, NULL, 0);
+		uint32_t temp;
+		ret = parse_json_time(httpd.response, &temp);
+		if (!ret)
+			*app->timestamp = temp;
+
 		logger_add_str(app->logger, TAG, false, httpd.response);
 	}
 	if (httpd.response)
 		vPortFree(httpd.response);
 
-	//
-	strcpy(url, app->params->url_app);
-	httpd.request = request;
-
+	// -> /api/info
 	strjson_init(request);
 	strjson_uint(request, "ts", *app->timestamp);
 	strjson_str(request, "name", PARAMS_DEVICE_NAME);
@@ -111,10 +154,14 @@ static void task(void *argument)
 	strjson_str(request, "url_app", app->params->url_app);
 	strjson_uint(request, "period", app->params->period);
 
+	strcpy(url, app->params->url_app);
+	strcat(url, "/api/info");
+	httpd.url = url;
+	httpd.request = request;
+	httpd.response = NULL;
+
 	sim800l_http(app->mod, &httpd, http_callback, 60000);
 	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-	// TODO: Parse JSON response
 
 	if (httpd.response)
 		vPortFree(httpd.response);
@@ -127,6 +174,7 @@ static void task(void *argument)
 		if (status)
 			vd.voltage = 0;
 
+		// -> /api/data
 		strjson_init(request);
 		strjson_uint(request, "ts", *app->timestamp);
 		strjson_uint(request, "ticks", xTaskGetTickCount());
@@ -134,10 +182,14 @@ static void task(void *argument)
 		strjson_null(request, "temp");
 		strjson_null(request, "count");
 
+		strcpy(url, app->params->url_app);
+		strcat(url, "/api/data");
+		httpd.url = url;
+		httpd.request = request;
+		httpd.response = NULL;
+
 		sim800l_http(app->mod, &httpd, http_callback, 60000);
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-		// TODO: Parse JSON response
 
 		if (httpd.response)
 			vPortFree(httpd.response);

@@ -24,16 +24,16 @@
 #define PARAMS_FW_B1 0
 #define PARAMS_FW_B2 0
 #define PARAMS_FW_B3 0
-#define PARAMS_FW_B4 6
+#define PARAMS_FW_B4 7
 
 #define PARAMS_FW_VERSION ( \
-		((uint32_t) PARAMS_FW_B1 << 24) || \
-		((uint32_t) PARAMS_FW_B2 << 16) || \
-		((uint32_t) PARAMS_FW_B3 << 8) || \
+		((uint32_t) PARAMS_FW_B1 << 24) | \
+		((uint32_t) PARAMS_FW_B2 << 16) | \
+		((uint32_t) PARAMS_FW_B3 << 8) | \
 		((uint32_t) PARAMS_FW_B4))
 
 #define PARAMS_MAGIC_EMPTY 0xFFFFFFFF
-#define PARAMS_MAGIC_VALID 0xAA550004
+#define PARAMS_MAGIC_VALID 0xAA550005
 
 #define PARAMS_APP_URL_SIZE 64
 #define PARAMS_MCU_UID_SIZE 32

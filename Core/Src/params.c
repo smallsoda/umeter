@@ -82,7 +82,7 @@ static void set_default(params_t *params)
 	strcpy(params->url_ota, "ota.proshutinsky.ru");
 	strcpy(params->url_app, "app.proshutinsky.ru");
 	uid_string(params->mcu_uid);
-	params->period = 60 * 10;
+	params->period = 60 * 5;
 }
 
 void params_init(void)

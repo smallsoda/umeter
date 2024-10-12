@@ -140,6 +140,7 @@ static void task(void *argument)
 
 	// -> /api/info
 	strjson_init(request);
+	strjson_str(request, "uid", app->params->mcu_uid); // ?
 	strjson_uint(request, "ts", *app->timestamp);
 	strjson_str(request, "name", PARAMS_DEVICE_NAME);
 	strjson_str(request, "bl_git", (char *) app->bl->hash);
@@ -176,6 +177,7 @@ static void task(void *argument)
 
 		// -> /api/data
 		strjson_init(request);
+		strjson_str(request, "uid", app->params->mcu_uid); // ?
 		strjson_uint(request, "ts", *app->timestamp);
 		strjson_uint(request, "ticks", xTaskGetTickCount());
 		strjson_int(request, "bat", vd.voltage);

@@ -20,7 +20,17 @@
 #define PARAMS_DATETIME __TIMESTAMP__
 
 #define PARAMS_DEVICE_NAME "umeter-a1"
-#define PARAMS_FW_VERSION 5
+
+#define PARAMS_FW_B1 0
+#define PARAMS_FW_B2 0
+#define PARAMS_FW_B3 0
+#define PARAMS_FW_B4 6
+
+#define PARAMS_FW_VERSION ( \
+		((uint32_t) PARAMS_FW_B1 << 24) || \
+		((uint32_t) PARAMS_FW_B2 << 16) || \
+		((uint32_t) PARAMS_FW_B3 << 8) || \
+		((uint32_t) PARAMS_FW_B4))
 
 #define PARAMS_MAGIC_EMPTY 0xFFFFFFFF
 #define PARAMS_MAGIC_VALID 0xAA550004

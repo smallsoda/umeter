@@ -29,6 +29,7 @@ void task_sim800l(struct sim800l *mod);
 void task_ota(struct ota *ota);
 void task_app(struct app *app);
 void task_info(struct app *app);
+void task_system(IWDG_HandleTypeDef *wdg);
 void task_blink(void);
 
 #endif /* UMETER_TASKS_H_ */

@@ -809,6 +809,8 @@ int sim800l_http(struct sim800l *mod, struct sim800l_http *data,
 	struct sim800l_task task;
 	BaseType_t status;
 
+	data->response = NULL;
+
 	task.issue = ISSUE_HTTP;
 	task.timeout = pdMS_TO_TICKS(timeout);
 	task.callback = callback;

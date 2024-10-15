@@ -27,6 +27,7 @@
 
 #include "sim800l.h"
 #include "ptasks.h"
+#include "tmpx75.h"
 #include "logger.h"
 #include "params.h"
 #include "atomic.h"
@@ -54,6 +55,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c2;
+
 IWDG_HandleTypeDef hiwdg;
 
 SPI_HandleTypeDef hspi2;
@@ -88,6 +91,7 @@ struct logger logger;
 struct w25q mem;
 struct sim800l mod;
 struct ota ota;
+struct tmpx75 tmp;
 
 struct app app;
 
@@ -104,6 +108,7 @@ static void MX_USART1_UART_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI2_Init(void);
 static void MX_IWDG_Init(void);
+static void MX_I2C2_Init(void);
 void task_default(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -187,6 +192,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_SPI2_Init();
   MX_IWDG_Init();
+  MX_I2C2_Init();
   /* USER CODE BEGIN 2 */
 
   //
@@ -198,11 +204,13 @@ int main(void)
   w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.url_ota);
+  tmpx75_init(&tmp, &hi2c2, GPIOB, GPIO_PIN_1, 0x9E);
 
   //
   app.timestamp = &timestamp;
   app.params = &params;
   app.logger = &logger;
+  app.tmp = &tmp;
   app.mod = &mod;
   app.bl = &bl;
 
@@ -311,6 +319,40 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief I2C2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C2_Init(void)
+{
+
+  /* USER CODE BEGIN I2C2_Init 0 */
+
+  /* USER CODE END I2C2_Init 0 */
+
+  /* USER CODE BEGIN I2C2_Init 1 */
+
+  /* USER CODE END I2C2_Init 1 */
+  hi2c2.Instance = I2C2;
+  hi2c2.Init.ClockSpeed = 100000;
+  hi2c2.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c2.Init.OwnAddress1 = 0;
+  hi2c2.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c2.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c2.Init.OwnAddress2 = 0;
+  hi2c2.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c2.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C2_Init 2 */
+
+  /* USER CODE END I2C2_Init 2 */
+
 }
 
 /**
@@ -488,10 +530,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|RST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4|GPIO_PIN_5|RST_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -500,8 +542,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : SPI2_CS_Pin PB4 PB5 RST_Pin */
-  GPIO_InitStruct.Pin = SPI2_CS_Pin|GPIO_PIN_4|GPIO_PIN_5|RST_Pin;
+  /*Configure GPIO pins : PB1 SPI2_CS_Pin PB4 PB5
+                           RST_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|SPI2_CS_Pin|GPIO_PIN_4|GPIO_PIN_5
+                          |RST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

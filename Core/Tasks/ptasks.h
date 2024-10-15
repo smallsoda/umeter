@@ -17,6 +17,7 @@ struct app
 {
 	struct sim800l *mod;
 	struct logger *logger;
+	struct tmpx75 *tmp;
 
 	volatile uint32_t *timestamp;
 	volatile struct bl_params *bl;

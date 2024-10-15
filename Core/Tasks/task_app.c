@@ -14,6 +14,7 @@
 #include "jsmn.h"
 
 #include "strjson.h"
+#include "tmpx75.h"
 #include "params.h"
 #include "main.h"
 #include "fws.h"
@@ -22,6 +23,9 @@
 #define TAG "APP"
 
 #define JSON_MAX_TOKENS 8
+
+#define HTTP_TIMEOUT_1MIN 60000
+#define HTTP_TIMEOUT_2MIN 120000
 
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
@@ -100,6 +104,8 @@ static void task(void *argument)
 
 	struct sim800l_voltage vd;
 	struct sim800l_http httpd;
+	int32_t temperature;
+	bool meas_temp;
 	char *request;
 	char *url;
 	int status;
@@ -116,6 +122,13 @@ static void task(void *argument)
 	vd.context = &status;
 	httpd.context = &status;
 
+	// TMPx75
+	ret = tmpx75_is_available(app->tmp);
+	if (!ret)
+		meas_temp = true;
+	else
+		meas_temp = false;
+
 	// <- /api/time
 	strcpy(url, app->params->url_app);
 	strcat(url, "/api/time");
@@ -123,7 +136,7 @@ static void task(void *argument)
 	httpd.request = NULL;
 	httpd.response = NULL;
 
-	sim800l_http(app->mod, &httpd, http_callback, 60000);
+	sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_2MIN);
 	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 	if (!status)
@@ -161,7 +174,7 @@ static void task(void *argument)
 	httpd.request = request;
 	httpd.response = NULL;
 
-	sim800l_http(app->mod, &httpd, http_callback, 60000);
+	sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_2MIN);
 	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 	if (httpd.response)
@@ -175,13 +188,19 @@ static void task(void *argument)
 		if (status)
 			vd.voltage = 0;
 
+		if (meas_temp)
+			ret = tmpx75_read_temp(app->tmp, &temperature);
+
 		// -> /api/data
 		strjson_init(request);
 		strjson_str(request, "uid", app->params->mcu_uid); // ?
 		strjson_uint(request, "ts", *app->timestamp);
 		strjson_uint(request, "ticks", xTaskGetTickCount());
 		strjson_int(request, "bat", vd.voltage);
-		strjson_null(request, "temp");
+		if (meas_temp && !ret)
+			strjson_int(request, "temp", temperature);
+		else
+			strjson_null(request, "temp");
 		strjson_null(request, "count");
 
 		strcpy(url, app->params->url_app);
@@ -190,7 +209,7 @@ static void task(void *argument)
 		httpd.request = request;
 		httpd.response = NULL;
 
-		sim800l_http(app->mod, &httpd, http_callback, 60000);
+		sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_1MIN);
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 		if (httpd.response)

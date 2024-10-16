@@ -61,7 +61,7 @@ static void info(struct app *app)
 static void task(void *argument)
 {
 	const char *t_names[] = {"system", "def", "app", "blink", "info", "logger",
-			"ota", "sim800l", NULL};
+			"ota", "sim800l", "counter", NULL};
 	TaskHandle_t t_handle;
 	TaskStatus_t details;
 	char temp[16];

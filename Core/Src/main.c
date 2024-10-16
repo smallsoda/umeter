@@ -92,6 +92,7 @@ struct w25q mem;
 struct sim800l mod;
 struct ota ota;
 struct tmpx75 tmp;
+struct counter cnt;
 
 struct app app;
 
@@ -134,7 +135,6 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
 	if (huart == &huart2)
 	{
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_SET); // TODO: Remove
 		HAL_UARTEx_ReceiveToIdle_DMA(huart, uart, UART_BUFFER_SIZE);
 	}
 }
@@ -147,9 +147,18 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 	}
 }
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == GPIO_PIN_3)
+	{
+		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4); // TODO: Remove
+		counter_irq(&cnt);
+	}
+}
+
 void hz_callback(TimerHandle_t timer)
 {
-	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4); // TODO: Remove
+	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5); // TODO: Remove
 	atomic_inc(&timestamp);
 }
 
@@ -205,11 +214,13 @@ int main(void)
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.url_ota);
   tmpx75_init(&tmp, &hi2c2, GPIOB, GPIO_PIN_1, 0x9E);
+  counter_init(&cnt, &timestamp);
 
   //
   app.timestamp = &timestamp;
   app.params = &params;
   app.logger = &logger;
+  app.cnt = &cnt;
   app.tmp = &tmp;
   app.mod = &mod;
   app.bl = &bl;
@@ -250,6 +261,7 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   task_system(&hiwdg);
   task_logger(&logger);
+  task_counter(&cnt);
   task_sim800l(&mod);
   task_ota(&ota);
   task_app(&app);
@@ -550,6 +562,16 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB3 */
+  GPIO_InitStruct.Pin = GPIO_PIN_3;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI3_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

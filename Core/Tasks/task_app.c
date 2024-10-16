@@ -180,6 +180,19 @@ static void task(void *argument)
 
 	for (;;)
 	{
+		// TODO: Replace
+		char cnt_str[32];
+		uint32_t cnt_count;
+		uint32_t cnt_ts;
+		while (counter_list_get(app->cnt, &cnt_count, &cnt_ts) == 0)
+		{
+			utoa(cnt_ts, cnt_str, 10);
+			logger_add_str(app->logger, "CNT:timestamp", false, cnt_str);
+
+			utoa(cnt_count, cnt_str, 10);
+			logger_add_str(app->logger, "CNT:count", false, cnt_str);
+		}
+
 		sim800l_voltage(app->mod, &vd, voltage_callback, 60000);
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 

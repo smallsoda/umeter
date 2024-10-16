@@ -157,10 +157,8 @@ static void task(void *argument)
 	strjson_uint(request, "ts", *app->timestamp);
 	strjson_str(request, "name", PARAMS_DEVICE_NAME);
 	strjson_str(request, "bl_git", (char *) app->bl->hash);
-	strjson_str(request, "bl_dt", (char *) app->bl->datetime);
 	strjson_uint(request, "bl_status", app->bl->status);
 	strjson_str(request, "app_git", GIT_COMMIT_HASH);
-	strjson_str(request, "app_dt", PARAMS_DATETIME);
 	strjson_uint(request, "app_ver", PARAMS_FW_VERSION);
 	strjson_str(request, "mcu", app->params->mcu_uid);
 	strjson_str(request, "apn", app->params->apn);

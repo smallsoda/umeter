@@ -47,17 +47,15 @@ static void info(struct app *app)
 {
 	char temp[32];
 
-	print_info_str(app->logger, "BL", "-", (char *) app->bl->datetime);
-	print_info_str(app->logger, "BL", "-", (char *) app->bl->hash);
+	print_info_str(app->logger, "BL", "git", (char *) app->bl->hash);
 	utoa(app->bl->status, temp, 10);
-	print_info_str(app->logger, "BL", "-", temp);
+	print_info_str(app->logger, "BL", "status", temp);
 
-	print_info_str(app->logger, "APP", "-", PARAMS_DATETIME);
-	print_info_str(app->logger, "APP", "-", GIT_COMMIT_HASH);
-	print_info_str(app->logger, "APP", "-", PARAMS_DEVICE_NAME);
+	print_info_str(app->logger, "APP", "git", GIT_COMMIT_HASH);
+	print_info_str(app->logger, "APP", "name", PARAMS_DEVICE_NAME);
 	utoa(PARAMS_FW_VERSION, temp, 10);
-	print_info_str(app->logger, "APP", "-", temp);
-	print_info_str(app->logger, "APP", "-", app->params->mcu_uid);
+	print_info_str(app->logger, "APP", "ver", temp);
+	print_info_str(app->logger, "APP", "MCU", app->params->mcu_uid);
 }
 
 static void task(void *argument)

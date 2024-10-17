@@ -94,6 +94,7 @@ struct ota ota;
 struct tmpx75 tmp;
 struct counter cnt;
 
+struct count_queue cntq;
 struct app app;
 
 extern const uint32_t *_app;
@@ -149,7 +150,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	if (GPIO_Pin == GPIO_PIN_3)
+	if (GPIO_Pin == GPIO_PIN_0)
 	{
 		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4); // TODO: Remove
 		counter_irq(&cnt);
@@ -214,13 +215,18 @@ int main(void)
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.url_ota);
   tmpx75_init(&tmp, &hi2c2, GPIOB, GPIO_PIN_1, 0x9E);
-  counter_init(&cnt, &timestamp);
+  counter_init(&cnt);
 
-  //
+  // cntq
+  cntq.cnt = &cnt;
+  cntq.queue = xQueueCreate(sizeof(struct count_item), 16); // ?
+  cntq.timestamp = &timestamp;
+
+  // app
   app.timestamp = &timestamp;
   app.params = &params;
   app.logger = &logger;
-  app.cnt = &cnt;
+  app.cntq = &cntq;
   app.tmp = &tmp;
   app.mod = &mod;
   app.bl = &bl;
@@ -261,7 +267,7 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   task_system(&hiwdg);
   task_logger(&logger);
-  task_counter(&cnt);
+  task_counter(&cntq);
   task_sim800l(&mod);
   task_ota(&ota);
   task_app(&app);
@@ -542,6 +548,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|RST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
@@ -554,6 +563,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : PA0 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pins : PB1 SPI2_CS_Pin PB4 PB5
                            RST_Pin */
   GPIO_InitStruct.Pin = GPIO_PIN_1|SPI2_CS_Pin|GPIO_PIN_4|GPIO_PIN_5
@@ -563,15 +585,9 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB3 */
-  GPIO_InitStruct.Pin = GPIO_PIN_3;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI3_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

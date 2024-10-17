@@ -16,22 +16,27 @@ static const osThreadAttr_t attributes = {
 
 static void task(void *argument)
 {
-	struct counter *cnt = argument;
+	struct count_queue *cntq = argument;
+
+	struct count_item item;
 
 	for(;;)
 	{
 		/**
-		 * TODO: Use COUNTER_ITEMS_SIZE and app->params->period to determine
+		 * TODO: Use cntq->queue size and app->params->period to determine
 		 * optimal delay value
 		 */
 		osDelay(60000);
-		counter_list_add(cnt);
+
+		item.count = counter(cntq->cnt);
+		item.timestamp = *cntq->timestamp;
+		xQueueSendToBack(cntq->queue, &item, portMAX_DELAY);
 	}
 }
 
 /******************************************************************************/
-void task_counter(struct counter *cnt)
+void task_counter(struct count_queue *cntq)
 {
-	handle = osThreadNew(task, cnt, &attributes);
+	handle = osThreadNew(task, cntq, &attributes);
 }
 

@@ -14,12 +14,25 @@
 #include "params.h"
 #include "ota.h"
 
+struct count_item
+{
+	uint32_t count;
+	uint32_t timestamp;
+};
+
+struct count_queue
+{
+	QueueHandle_t queue;
+	struct counter *cnt;
+	volatile uint32_t *timestamp;
+};
+
 struct app
 {
 	struct sim800l *mod;
 	struct logger *logger;
-	struct counter *cnt;
 	struct tmpx75 *tmp;
+	struct count_queue *cntq;
 
 	volatile uint32_t *timestamp;
 	volatile struct bl_params *bl;
@@ -33,7 +46,7 @@ void task_ota(struct ota *ota);
 void task_app(struct app *app);
 void task_info(struct app *app);
 void task_system(IWDG_HandleTypeDef *wdg);
-void task_counter(struct counter *cnt);
+void task_counter(struct count_queue *cntq);
 void task_blink(void);
 
 #endif /* UMETER_TASKS_H_ */

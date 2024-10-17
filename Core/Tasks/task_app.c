@@ -181,16 +181,15 @@ static void task(void *argument)
 	for (;;)
 	{
 		// TODO: Replace
-		char cnt_str[32];
-		uint32_t cnt_count;
-		uint32_t cnt_ts;
-		while (counter_list_get(app->cnt, &cnt_count, &cnt_ts) == 0)
+		char strcnt[32];
+		struct count_item item;
+		while (xQueueReceive(app->cntq->queue, &item, 0) == pdTRUE )
 		{
-			utoa(cnt_ts, cnt_str, 10);
-			logger_add_str(app->logger, "CNT:timestamp", false, cnt_str);
+			utoa(item.timestamp, strcnt, 10);
+			logger_add_str(app->logger, "CNT:timestamp", false, strcnt);
 
-			utoa(cnt_count, cnt_str, 10);
-			logger_add_str(app->logger, "CNT:count", false, cnt_str);
+			utoa(item.count, strcnt, 10);
+			logger_add_str(app->logger, "CNT:count", false, strcnt);
 		}
 
 		sim800l_voltage(app->mod, &vd, voltage_callback, 60000);

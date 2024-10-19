@@ -14,6 +14,7 @@
 #include "jsmn.h"
 
 #include "strjson.h"
+#include "base64.h"
 #include "tmpx75.h"
 #include "params.h"
 #include "main.h"
@@ -23,6 +24,9 @@
 #define TAG "APP"
 
 #define JSON_MAX_TOKENS 8
+
+#define COUNTER_BUF_LEN (COUNTER_QUEUE_LEN * sizeof(struct count_item))
+#define COUNTER_STR_LEN (4 * ((COUNTER_BUF_LEN + 2) / 3) + 1)
 
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
@@ -98,6 +102,20 @@ static int parse_json_time(const char *response, uint32_t *ts)
 	return 0;
 }
 
+static void counter_base64(QueueHandle_t queue, char *buf)
+{
+	struct count_item item[COUNTER_QUEUE_LEN];
+	size_t enclen;
+	int i = 0;
+
+	while (i < COUNTER_QUEUE_LEN && xQueueReceive(queue, &item[i], 0) == pdTRUE)
+		i++;
+
+	base64_encode((unsigned char *) item, sizeof(struct count_item) * i, buf,
+			&enclen);
+	buf[enclen] = '\0';
+}
+
 static void task(void *argument)
 {
 	struct app *app = argument;
@@ -107,12 +125,17 @@ static void task(void *argument)
 	int32_t temperature;
 	bool meas_temp;
 	char *request;
+	char *count;
 	char *url;
 	int status;
 	int ret;
 
 	request = pvPortMalloc(512);
 	if (!request)
+		vTaskDelete(NULL);
+
+	count = pvPortMalloc(COUNTER_STR_LEN);
+	if (!count)
 		vTaskDelete(NULL);
 
 	url = pvPortMalloc(PARAMS_APP_URL_SIZE + 32);
@@ -180,24 +203,16 @@ static void task(void *argument)
 
 	for (;;)
 	{
-		// TODO: Replace
-		char strcnt[32];
-		struct count_item item;
-		while (xQueueReceive(app->cntq->queue, &item, 0) == pdTRUE )
-		{
-			utoa(item.timestamp, strcnt, 10);
-			logger_add_str(app->logger, "CNT:timestamp", false, strcnt);
-
-			utoa(item.count, strcnt, 10);
-			logger_add_str(app->logger, "CNT:count", false, strcnt);
-		}
-
+		// Voltage
 		sim800l_voltage(app->mod, &vd, voltage_callback, 60000);
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
 		if (status)
 			vd.voltage = 0;
 
+		// Counter
+		counter_base64(app->cntq->queue, count);
+
+		// Temperature
 		if (meas_temp)
 			ret = tmpx75_read_temp(app->tmp, &temperature);
 
@@ -207,11 +222,9 @@ static void task(void *argument)
 		strjson_uint(request, "ts", *app->timestamp);
 		strjson_uint(request, "ticks", xTaskGetTickCount());
 		strjson_int(request, "bat", vd.voltage);
+		strjson_str(request, "count", count);
 		if (meas_temp && !ret)
 			strjson_int(request, "temp", temperature);
-		else
-			strjson_null(request, "temp");
-		strjson_null(request, "count");
 
 		strcpy(url, app->params->url_app);
 		strcat(url, "/api/data");
@@ -226,7 +239,8 @@ static void task(void *argument)
 			vPortFree(httpd.response);
 
 		blink();
-		osDelay(app->params->period * 1000);
+//		osDelay(app->params->period * 1000); // TODO: Restore
+		osDelay(60000);
 	}
 }
 

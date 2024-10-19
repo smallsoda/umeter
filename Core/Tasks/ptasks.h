@@ -14,6 +14,8 @@
 #include "params.h"
 #include "ota.h"
 
+#define COUNTER_QUEUE_LEN 16 // ?
+
 struct count_item
 {
 	uint32_t count;

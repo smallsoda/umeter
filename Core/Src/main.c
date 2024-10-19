@@ -219,7 +219,7 @@ int main(void)
 
   // cntq
   cntq.cnt = &cnt;
-  cntq.queue = xQueueCreate(sizeof(struct count_item), 16); // ?
+  cntq.queue = xQueueCreate(COUNTER_QUEUE_LEN, sizeof(struct count_item));
   cntq.timestamp = &timestamp;
 
   // app

@@ -23,10 +23,11 @@ static void task(void *argument)
 	for(;;)
 	{
 		/**
-		 * TODO: Use cntq->queue size and app->params->period to determine
+		 * TODO: Use COUNTER_QUEUE_LEN and app->params->period to determine
 		 * optimal delay value
 		 */
-		osDelay(60000);
+//		osDelay(60000); // TODO: Restore
+		osDelay(20000);
 
 		item.count = counter(cntq->cnt);
 		item.timestamp = *cntq->timestamp;

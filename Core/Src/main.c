@@ -25,9 +25,11 @@
 
 #include "timers.h"
 
+#include "appiface.h"
 #include "sim800l.h"
 #include "ptasks.h"
 #include "tmpx75.h"
+#include "siface.h"
 #include "logger.h"
 #include "params.h"
 #include "atomic.h"
@@ -45,7 +47,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define UART_BUFFER_SIZE SIM800L_UART_BUFFER_SIZE
+#define UART_BUFFER_SIZE \
+	SIM800L_UART_BUFFER_SIZE > SIFACE_UART_BUFFER_SIZE ? \
+	SIM800L_UART_BUFFER_SIZE : SIFACE_UART_BUFFER_SIZE
 
 /* USER CODE END PD */
 
@@ -64,6 +68,7 @@ SPI_HandleTypeDef hspi2;
 UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart1_tx;
+DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart2_tx;
 DMA_HandleTypeDef hdma_usart2_rx;
 
@@ -84,15 +89,18 @@ TimerHandle_t hz_timer_handle;
 
 volatile uint32_t timestamp;
 
-uint8_t uart[UART_BUFFER_SIZE];
+uint8_t ub_mod[UART_BUFFER_SIZE];
+uint8_t ub_sif[UART_BUFFER_SIZE];
 
 params_t params;
+struct siface siface;
 struct logger logger;
 struct w25q mem;
 struct sim800l mod;
 struct ota ota;
 struct tmpx75 tmp;
 struct counter cnt;
+struct appiface appif;
 
 struct count_queue cntq;
 struct app app;
@@ -122,21 +130,30 @@ void task_default(void *argument);
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
-	if (huart == &huart2)
-	{
-		if (HAL_UARTEx_GetRxEventType(huart) == HAL_UART_RXEVENT_HT)
-			return;
+	if (HAL_UARTEx_GetRxEventType(huart) == HAL_UART_RXEVENT_HT)
+		return;
 
-		sim800l_irq(&mod, (const char *) uart, size);
-		HAL_UARTEx_ReceiveToIdle_DMA(huart, uart, UART_BUFFER_SIZE);
+	if (huart == &huart1)
+	{
+		siface_rx_irq(&siface, (const char *) ub_sif, size);
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, ub_sif, UART_BUFFER_SIZE);
+	}
+	else if (huart == &huart2)
+	{
+		sim800l_irq(&mod, (const char *) ub_mod, size);
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, ub_mod, UART_BUFFER_SIZE);
 	}
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-	if (huart == &huart2)
+	if (huart == &huart1)
 	{
-		HAL_UARTEx_ReceiveToIdle_DMA(huart, uart, UART_BUFFER_SIZE);
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, ub_sif, UART_BUFFER_SIZE);
+	}
+	else if (huart == &huart2)
+	{
+		HAL_UARTEx_ReceiveToIdle_DMA(huart, ub_mod, UART_BUFFER_SIZE);
 	}
 }
 
@@ -144,7 +161,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
 	if (huart == &huart1)
 	{
-		logger_irq(&logger);
+		siface_tx_irq(&siface);
 	}
 }
 
@@ -210,7 +227,13 @@ int main(void)
   params_get(&params);
 
   //
-  logger_init(&logger, &huart1, 24);
+  appif.timestamp = &timestamp;
+  appif.params = &params;
+  appif.bl = &bl;
+
+  //
+  siface_init(&siface, &huart1, 32, appiface, &appif);
+  logger_init(&logger, &siface);
   w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.url_ota);
@@ -232,7 +255,8 @@ int main(void)
   app.bl = &bl;
 
   //
-  HAL_UARTEx_ReceiveToIdle_DMA(&huart2, uart, UART_BUFFER_SIZE);
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart1, ub_sif, UART_BUFFER_SIZE);
+  HAL_UARTEx_ReceiveToIdle_DMA(&huart2, ub_mod, UART_BUFFER_SIZE);
 
   /* USER CODE END 2 */
 
@@ -266,13 +290,12 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   task_system(&hiwdg);
-  task_logger(&logger);
+  task_siface(&siface);
   task_counter(&cntq);
   task_sim800l(&mod);
   task_ota(&ota);
   task_app(&app);
   task_info(&app);
-  task_blink();
 
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -518,6 +541,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel4_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
+  /* DMA1_Channel5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
   /* DMA1_Channel6_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel6_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel6_IRQn);

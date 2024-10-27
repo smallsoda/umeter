@@ -10,7 +10,7 @@
 
 #include "counter.h"
 #include "sim800l.h"
-#include "logger.h"
+#include "siface.h"
 #include "params.h"
 #include "ota.h"
 
@@ -42,13 +42,12 @@ struct app
 };
 
 
-void task_logger(struct logger *logger);
+void task_siface(struct siface *siface);
 void task_sim800l(struct sim800l *mod);
 void task_ota(struct ota *ota);
 void task_app(struct app *app);
 void task_info(struct app *app);
 void task_system(IWDG_HandleTypeDef *wdg);
 void task_counter(struct count_queue *cntq);
-void task_blink(void);
 
 #endif /* UMETER_TASKS_H_ */

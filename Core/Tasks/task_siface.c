@@ -1,5 +1,5 @@
 /*
- * Logger task
+ * Serial interface task
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
  * 2024
@@ -9,19 +9,19 @@
 
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
-  .name = "logger",
-  .stack_size = 64 * 4,
+  .name = "siface",
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
 static void task(void *argument)
 {
-	struct logger *logger = argument;
-	logger_task(logger); // <- Infinite loop
+	struct siface *siface = argument;
+	siface_task(siface); // <- Infinite loop
 }
 
 /******************************************************************************/
-void task_logger(struct logger *logger)
+void task_siface(struct siface *siface)
 {
-	handle = osThreadNew(task, logger, &attributes);
+	handle = osThreadNew(task, siface, &attributes);
 }

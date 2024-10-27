@@ -8,26 +8,19 @@
 #ifndef LOGGER_H_
 #define LOGGER_H_
 
-#include "stm32f1xx_hal.h"
-
 #include <stdbool.h>
-#include "cmsis_os.h"
-#include "queue.h"
-#include "task.h"
+
+#include "siface.h"
 
 #define LOGGER
 
 struct logger
 {
-	UART_HandleTypeDef *uart;
-	xQueueHandle queue;
-	TaskHandle_t task;
+	struct siface *siface;
 };
 
 
-void logger_init(struct logger *logger, UART_HandleTypeDef *uart, size_t qsize);
-void logger_irq(struct logger *logger);
-void logger_task(struct logger *logger);
+void logger_init(struct logger *logger, struct siface *siface);
 
 #ifdef LOGGER
 int logger_add(struct logger *logger, const char *tag, bool big,

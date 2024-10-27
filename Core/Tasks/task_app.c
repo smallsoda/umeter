@@ -130,7 +130,7 @@ static void task(void *argument)
 	int status;
 	int ret;
 
-	request = pvPortMalloc(512);
+	request = pvPortMalloc(512); // NOTE: ?
 	if (!request)
 		vTaskDelete(NULL);
 
@@ -221,8 +221,10 @@ static void task(void *argument)
 		strjson_str(request, "uid", app->params->mcu_uid); // ?
 		strjson_uint(request, "ts", *app->timestamp);
 		strjson_uint(request, "ticks", xTaskGetTickCount());
-		strjson_int(request, "bat", vd.voltage);
-		strjson_str(request, "count", count);
+		if (vd.voltage)
+			strjson_int(request, "bat", vd.voltage);
+		if (*count)
+			strjson_str(request, "count", count);
 		if (meas_temp && !ret)
 			strjson_int(request, "temp", temperature);
 

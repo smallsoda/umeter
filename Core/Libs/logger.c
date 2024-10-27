@@ -10,41 +10,17 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "cmsis_os.h"
+#include "queue.h"
+
 #define MAX_DATA_LEN 128
 
 
 /******************************************************************************/
-void logger_init(struct logger *logger, UART_HandleTypeDef *uart, size_t qsize)
+void logger_init(struct logger *logger, struct siface *siface)
 {
 	memset(logger, 0, sizeof(*logger));
-	logger->uart = uart;
-	logger->queue = xQueueCreate(qsize, sizeof(void *));
-	logger->task = NULL;
-}
-
-/******************************************************************************/
-void logger_irq(struct logger *logger)
-{
-	BaseType_t woken = pdFALSE;
-
-	if (logger->task)
-		vTaskNotifyGiveFromISR(logger->task, &woken);
-}
-
-/******************************************************************************/
-void logger_task(struct logger *logger)
-{
-	char *string;
-
-	logger->task = xTaskGetCurrentTaskHandle();
-
-	for (;;)
-	{
-		xQueueReceive(logger->queue, &string, portMAX_DELAY);
-		HAL_UART_Transmit_DMA(logger->uart, (uint8_t *) string, strlen(string));
-		ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(1000));
-		vPortFree(string);
-	}
+	logger->siface = siface;
 }
 
 /******************************************************************************/
@@ -52,10 +28,10 @@ void logger_task(struct logger *logger)
 int logger_add(struct logger *logger, const char *tag, bool big,
 		const char *buf, size_t len)
 {
-	BaseType_t status;
 	char ticks[16];
 	char *log;
 	size_t ll;
+	int ret;
 
 	if (!big && len > MAX_DATA_LEN)
 		len = MAX_DATA_LEN;
@@ -86,8 +62,8 @@ int logger_add(struct logger *logger, const char *tag, bool big,
 			log[i] = '*';
 	}
 
-	status = xQueueSendToBack(logger->queue, &log, 0);
-	if (status != pdTRUE)
+	ret = siface_add(logger->siface, log);
+	if (ret < 0)
 	{
 		vPortFree(log);
 		return -1;

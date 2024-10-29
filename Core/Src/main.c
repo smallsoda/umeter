@@ -23,6 +23,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include <string.h>
+
 #include "timers.h"
 
 #include "appiface.h"
@@ -230,6 +232,7 @@ int main(void)
   appif.timestamp = &timestamp;
   appif.params = &params;
   appif.bl = &bl;
+  memcpy(&appif.uparams, &params, sizeof(params));
 
   //
   siface_init(&siface, &huart1, 32, appiface, &appif);

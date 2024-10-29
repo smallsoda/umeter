@@ -64,6 +64,8 @@ static size_t receive_buf(struct siface *siface)
 			SIFACE_BUFFER_SIZE - siface->buflen, 0);
 	siface->buflen += rec;
 
+	siface->buf[siface->buflen] = '\0';
+
 	return rec;
 }
 

@@ -15,6 +15,8 @@ struct appiface
 	volatile uint32_t *timestamp;
 	volatile struct bl_params *bl;
 	params_t *params;
+
+	params_t uparams;
 };
 
 

@@ -14,6 +14,7 @@ static const osThreadAttr_t attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 
+
 static void task(void *argument)
 {
 	struct sim800l *mod = argument;

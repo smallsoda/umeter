@@ -10,10 +10,13 @@
 
 #include "params.h"
 
+#include "ptasks.h"
+
 struct appiface
 {
 	volatile uint32_t *timestamp;
 	volatile struct bl_params *bl;
+	struct actual *actual;
 	params_t *params;
 
 	params_t uparams;

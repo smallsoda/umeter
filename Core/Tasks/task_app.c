@@ -25,8 +25,8 @@
 
 #define JSON_MAX_TOKENS 8
 
-#define COUNTER_BUF_LEN (COUNTER_QUEUE_LEN * sizeof(struct count_item))
-#define COUNTER_STR_LEN (4 * ((COUNTER_BUF_LEN + 2) / 3) + 1)
+#define SENSORS_BUF_LEN (SENSORS_QUEUE_LEN * sizeof(struct item))
+#define SENSORS_STR_LEN (4 * ((SENSORS_BUF_LEN + 2) / 3) + 1)
 
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
@@ -102,16 +102,16 @@ static int parse_json_time(const char *response, uint32_t *ts)
 	return 0;
 }
 
-static void counter_base64(QueueHandle_t queue, char *buf)
+static void sensor_base64(QueueHandle_t queue, char *buf)
 {
-	struct count_item item[COUNTER_QUEUE_LEN];
+	struct item item[SENSORS_QUEUE_LEN];
 	size_t enclen;
 	int i = 0;
 
-	while (i < COUNTER_QUEUE_LEN && xQueueReceive(queue, &item[i], 0) == pdTRUE)
+	while (i < SENSORS_QUEUE_LEN && xQueueReceive(queue, &item[i], 0) == pdTRUE)
 		i++;
 
-	base64_encode((unsigned char *) item, sizeof(struct count_item) * i, buf,
+	base64_encode((unsigned char *) item, sizeof(struct item) * i, buf,
 			&enclen);
 	buf[enclen] = '\0';
 }
@@ -122,10 +122,8 @@ static void task(void *argument)
 
 	struct sim800l_voltage vd;
 	struct sim800l_http httpd;
-	int32_t temperature;
-	bool meas_temp;
 	char *request;
-	char *count;
+	char *sensor;
 	char *url;
 	int status;
 	int ret;
@@ -134,8 +132,8 @@ static void task(void *argument)
 	if (!request)
 		vTaskDelete(NULL);
 
-	count = pvPortMalloc(COUNTER_STR_LEN);
-	if (!count)
+	sensor = pvPortMalloc(SENSORS_STR_LEN);
+	if (!sensor)
 		vTaskDelete(NULL);
 
 	url = pvPortMalloc(PARAMS_APP_URL_SIZE + 32);
@@ -144,13 +142,6 @@ static void task(void *argument)
 
 	vd.context = &status;
 	httpd.context = &status;
-
-	// TMPx75
-	ret = tmpx75_is_available(app->tmp);
-	if (!ret)
-		meas_temp = true;
-	else
-		meas_temp = false;
 
 	// <- /api/time
 	strcpy(url, app->params->url_app);
@@ -207,14 +198,15 @@ static void task(void *argument)
 		sim800l_voltage(app->mod, &vd, voltage_callback, 60000);
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		if (status)
+		{
 			vd.voltage = 0;
-
-		// Counter
-		counter_base64(app->cntq->queue, count);
-
-		// Temperature
-		if (meas_temp)
-			ret = tmpx75_read_temp(app->tmp, &temperature);
+		}
+		else
+		{
+			xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
+			app->sens->actual->voltage = vd.voltage;
+			xSemaphoreGive(app->sens->actual->mutex);
+		}
 
 		// -> /api/data
 		strjson_init(request);
@@ -223,10 +215,12 @@ static void task(void *argument)
 		strjson_uint(request, "ticks", xTaskGetTickCount());
 		if (vd.voltage)
 			strjson_int(request, "bat", vd.voltage);
-		if (*count)
-			strjson_str(request, "count", count);
-		if (meas_temp && !ret)
-			strjson_int(request, "temp", temperature);
+		sensor_base64(app->sens->qcnt, sensor); /* Counter */
+		if (*sensor)
+			strjson_str(request, "count", sensor);
+		sensor_base64(app->sens->qtmp, sensor); /* Temperature */
+		if (*sensor)
+			strjson_str(request, "temp", sensor);
 
 		strcpy(url, app->params->url_app);
 		strcat(url, "/api/data");

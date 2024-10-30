@@ -104,6 +104,24 @@ static int parse(struct appiface *appif, const char *request, char *response)
 			strjson_str(response, "url_app", appif->uparams.url_app);
 		else if (jsoneq(request, tparam, "period") == 0)
 			strjson_uint(response, "period", appif->uparams.period);
+		else if (jsoneq(request, tparam, "bat") == 0)
+		{
+			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
+			strjson_uint(response, "bat", appif->actual->voltage);
+			xSemaphoreGive(appif->actual->mutex);
+		}
+		else if (jsoneq(request, tparam, "count") == 0)
+		{
+			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
+			strjson_uint(response, "count", appif->actual->count);
+			xSemaphoreGive(appif->actual->mutex);
+		}
+		else if (jsoneq(request, tparam, "temp") == 0)
+		{
+			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
+			strjson_int(response, "temp", appif->actual->temperature);
+			xSemaphoreGive(appif->actual->mutex);
+		}
 		else
 			return -1;
 	}

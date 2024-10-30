@@ -15,6 +15,7 @@ static const osThreadAttr_t attributes = {
   .priority = (osPriority_t) osPriorityBelowNormal,
 };
 
+
 static void blink(void)
 {
 	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);

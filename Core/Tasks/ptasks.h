@@ -8,33 +8,49 @@
 #ifndef UMETER_TASKS_H_
 #define UMETER_TASKS_H_
 
+#include "cmsis_os.h"
+#include "semphr.h"
+
 #include "counter.h"
 #include "sim800l.h"
 #include "siface.h"
 #include "params.h"
 #include "ota.h"
 
-#define COUNTER_QUEUE_LEN 16 // ?
+#define SENSORS_QUEUE_LEN 16 // ?
 
-struct count_item
+struct item
 {
-	uint32_t count;
+	uint32_t value;
 	uint32_t timestamp;
 };
 
-struct count_queue
+struct actual
 {
-	QueueHandle_t queue;
+	SemaphoreHandle_t mutex;
+
+	int voltage;
+	uint32_t count;
+	int32_t temperature;
+};
+
+struct sensors
+{
+	QueueHandle_t qcnt;
+	QueueHandle_t qtmp;
+
 	struct counter *cnt;
+	struct tmpx75 *tmp;
 	volatile uint32_t *timestamp;
+
+	struct actual *actual;
 };
 
 struct app
 {
 	struct sim800l *mod;
+	struct sensors *sens;
 	struct logger *logger;
-	struct tmpx75 *tmp;
-	struct count_queue *cntq;
 
 	volatile uint32_t *timestamp;
 	volatile struct bl_params *bl;
@@ -48,6 +64,6 @@ void task_ota(struct ota *ota);
 void task_app(struct app *app);
 void task_info(struct app *app);
 void task_system(IWDG_HandleTypeDef *wdg);
-void task_counter(struct count_queue *cntq);
+void task_sensors(struct sensors *sens);
 
 #endif /* UMETER_TASKS_H_ */

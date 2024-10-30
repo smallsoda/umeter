@@ -104,7 +104,8 @@ struct tmpx75 tmp;
 struct counter cnt;
 struct appiface appif;
 
-struct count_queue cntq;
+struct actual actual;
+struct sensors sens;
 struct app app;
 
 extern const uint32_t *_app;
@@ -229,8 +230,13 @@ int main(void)
   params_get(&params);
 
   //
+  memset(&actual, 0, sizeof(actual));
+  actual.mutex = xSemaphoreCreateMutex();
+
+  //
   appif.timestamp = &timestamp;
   appif.params = &params;
+  appif.actual = &actual;
   appif.bl = &bl;
   memcpy(&appif.uparams, &params, sizeof(params));
 
@@ -243,17 +249,19 @@ int main(void)
   tmpx75_init(&tmp, &hi2c2, GPIOB, GPIO_PIN_1, 0x9E);
   counter_init(&cnt);
 
-  // cntq
-  cntq.cnt = &cnt;
-  cntq.queue = xQueueCreate(COUNTER_QUEUE_LEN, sizeof(struct count_item));
-  cntq.timestamp = &timestamp;
+  // sens
+  sens.qcnt = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
+  sens.qtmp = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
+  sens.cnt = &cnt;
+  sens.tmp = &tmp;
+  sens.timestamp = &timestamp;
+  sens.actual = &actual;
 
   // app
   app.timestamp = &timestamp;
   app.params = &params;
   app.logger = &logger;
-  app.cntq = &cntq;
-  app.tmp = &tmp;
+  app.sens = &sens;
   app.mod = &mod;
   app.bl = &bl;
 
@@ -294,7 +302,7 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   task_system(&hiwdg);
   task_siface(&siface);
-  task_counter(&cntq);
+  task_sensors(&sens);
   task_sim800l(&mod);
   task_ota(&ota);
   task_app(&app);

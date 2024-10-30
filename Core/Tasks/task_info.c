@@ -25,6 +25,7 @@ static const osThreadAttr_t attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 
+
 static void print_info_str(struct logger *logger, const char *header,
 		const char *sub, const char *data)
 {
@@ -61,7 +62,7 @@ static void info(struct app *app)
 static void task(void *argument)
 {
 	const char *t_names[] = {"system", "def", "app", "siface", "info", "ota",
-			"sim800l", "counter", NULL};
+			"sim800l", "sensors", NULL};
 	TaskHandle_t t_handle;
 	TaskStatus_t details;
 	char temp[16];

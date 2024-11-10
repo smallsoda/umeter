@@ -235,8 +235,7 @@ static void task(void *argument)
 			vPortFree(httpd.response);
 
 		blink();
-//		osDelay(app->params->period * 1000); // TODO: Restore
-		osDelay(60000);
+		osDelay(app->params->period * 1000);
 	}
 }
 

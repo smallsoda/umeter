@@ -62,11 +62,9 @@ static void task(void *argument)
 		/**
 		 * TODO: Use COUNTER_QUEUE_LEN and app->params->period to determine
 		 * optimal delay value
-		 *
-		 * TODO: 60000
 		 */
 		// Add sensor readings to queues
-		if ((xTaskGetTickCount() - ticks) >= pdMS_TO_TICKS(20000))
+		if ((xTaskGetTickCount() - ticks) >= pdMS_TO_TICKS(60000))
 		{
 			ticks = xTaskGetTickCount();
 

@@ -35,6 +35,7 @@
 #include "logger.h"
 #include "params.h"
 #include "atomic.h"
+#include "sht20.h"
 #include "w25q.h"
 #include "ota.h"
 #include "fws.h"
@@ -100,6 +101,7 @@ struct logger logger;
 struct w25q mem;
 struct sim800l mod;
 struct ota ota;
+struct sht20 sht;
 struct tmpx75 tmp;
 struct counter cnt;
 struct appiface appif;
@@ -246,14 +248,17 @@ int main(void)
   w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.url_ota);
+  sht20_init(&tmp, &hi2c2, GPIOx, GPIO_PIN_x);
   tmpx75_init(&tmp, &hi2c2, GPIOB, GPIO_PIN_1, 0x9E);
   counter_init(&cnt);
 
   // sens
   sens.qcnt = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.qtmp = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
+  sens.qhum = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.cnt = &cnt;
   sens.tmp = &tmp;
+  sens.sht = &sht;
   sens.timestamp = &timestamp;
   sens.actual = &actual;
 

@@ -221,6 +221,9 @@ static void task(void *argument)
 		sensor_base64(app->sens->qtmp, sensor); /* Temperature */
 		if (*sensor)
 			strjson_str(request, "temp", sensor);
+		sensor_base64(app->sens->qhum, sensor); /* Humidity */
+		if (*sensor)
+			strjson_str(request, "hum", sensor);
 
 		strcpy(url, app->params->url_app);
 		strcat(url, "/api/data");

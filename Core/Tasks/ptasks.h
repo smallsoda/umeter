@@ -31,6 +31,7 @@ struct actual
 
 	int voltage;
 	uint32_t count;
+	int32_t humidity;
 	int32_t temperature;
 };
 
@@ -38,9 +39,11 @@ struct sensors
 {
 	QueueHandle_t qcnt;
 	QueueHandle_t qtmp;
+	QueueHandle_t qhum;
 
 	struct counter *cnt;
 	struct tmpx75 *tmp;
+	struct sht20 *sht;
 	volatile uint32_t *timestamp;
 
 	struct actual *actual;

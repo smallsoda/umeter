@@ -29,7 +29,7 @@ enum
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "sensors",
-  .stack_size = 128 * 4,
+  .stack_size = 96 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
 
@@ -42,9 +42,9 @@ static void task(void *argument)
 	int drdy; // Sensor data was successfully read (bit mask)
 	int ret;
 
-	int32_t temperature;
-	int32_t humidity;
-	uint32_t count;
+	int32_t temperature = 0;
+	int32_t humidity = 0;
+	uint32_t count = 0;
 
 	TickType_t ticks = xTaskGetTickCount();
 	TickType_t wake = xTaskGetTickCount();
@@ -127,7 +127,7 @@ static void task(void *argument)
 			if (drdy & DRDY_HUM)
 			{
 				item.value = humidity;
-				item.timestamp = *sens->humidity;
+				item.timestamp = *sens->timestamp;
 				xQueueSendToBack(sens->qhum, &item, 0);
 			}
 		}

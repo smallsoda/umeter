@@ -122,6 +122,12 @@ static int parse(struct appiface *appif, const char *request, char *response)
 			strjson_int(response, "temp", appif->actual->temperature);
 			xSemaphoreGive(appif->actual->mutex);
 		}
+		else if (jsoneq(request, tparam, "hum") == 0)
+		{
+			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
+			strjson_int(response, "hum", appif->actual->humidity);
+			xSemaphoreGive(appif->actual->mutex);
+		}
 		else
 			return -1;
 	}

@@ -68,8 +68,8 @@ int sht20_is_available(struct sht20 *sen)
 	power_on(sen);
 	osDelay(10);
 
-	HAL_I2C_Mem_Read(sen->i2c, I2C_ADDRESS, I2C_CMD_USER, I2C_MEMADD_SIZE_8BIT,
-			*buf, 1, I2C_TIMEOUT);
+	status = HAL_I2C_Mem_Read(sen->i2c, I2C_ADDRESS, I2C_CMD_USER,
+			I2C_MEMADD_SIZE_8BIT, &buf, 1, I2C_TIMEOUT);
 	power_off(sen);
 
 	if (status != HAL_OK)
@@ -107,14 +107,15 @@ int sht20_read_temp(struct sht20 *sen, int32_t *value)
 {
 	int attempts = READ_ATTEMPTS;
 	HAL_StatusTypeDef status;
-	uint8_t buf[3];
+	uint8_t cmd, buf[3];
 	uint16_t reg;
 
 	power_on(sen);
 	osDelay(50);
 
-	status = HAL_I2C_Master_Transmit(sen->i2c, I2C_ADDRESS, I2C_CMD_NO_HOLD_T,
-			1, I2C_TIMEOUT);
+	cmd = I2C_CMD_NO_HOLD_T;
+	status = HAL_I2C_Master_Transmit(sen->i2c, I2C_ADDRESS, &cmd, 1,
+			I2C_TIMEOUT);
 	if (status != HAL_OK)
 	{
 		power_off(sen);
@@ -137,7 +138,7 @@ int sht20_read_temp(struct sht20 *sen, int32_t *value)
 
 	power_off(sen);
 
-	if (calc_crc8(CRC_POLYNOMIAL, buf, 2) != buf[2])
+	if (calc_crc8(buf, 2) != buf[2])
 		return -1;
 
 	reg = (uint16_t) buf[0] << 8 | buf[1];
@@ -152,14 +153,15 @@ int sht20_read_hum(struct sht20 *sen, int32_t *value)
 {
 	int attempts = READ_ATTEMPTS;
 	HAL_StatusTypeDef status;
-	uint8_t buf[3];
+	uint8_t cmd, buf[3];
 	uint16_t reg;
 
 	power_on(sen);
 	osDelay(50);
 
-	status = HAL_I2C_Master_Transmit(sen->i2c, I2C_ADDRESS, I2C_CMD_NO_HOLD_RH,
-			1, I2C_TIMEOUT);
+	cmd = I2C_CMD_NO_HOLD_RH;
+	status = HAL_I2C_Master_Transmit(sen->i2c, I2C_ADDRESS, &cmd, 1,
+			I2C_TIMEOUT);
 	if (status != HAL_OK)
 	{
 		power_off(sen);
@@ -182,7 +184,7 @@ int sht20_read_hum(struct sht20 *sen, int32_t *value)
 
 	power_off(sen);
 
-	if (calc_crc8(CRC_POLYNOMIAL, buf, 2) != buf[2])
+	if (calc_crc8(buf, 2) != buf[2])
 		return -1;
 
 	reg = (uint16_t) buf[0] << 8 | buf[1];

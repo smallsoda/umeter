@@ -35,7 +35,7 @@
 #include "logger.h"
 #include "params.h"
 #include "atomic.h"
-#include "sht20.h"
+#include "aht20.h"
 #include "w25q.h"
 #include "ota.h"
 #include "fws.h"
@@ -101,7 +101,7 @@ struct logger logger;
 struct w25q mem;
 struct sim800l mod;
 struct ota ota;
-struct sht20 sht;
+struct aht20 aht;
 struct tmpx75 tmp;
 struct counter cnt;
 struct appiface appif;
@@ -173,15 +173,11 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
 	if (GPIO_Pin == GPIO_PIN_0)
-	{
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4); // TODO: Remove
 		counter_irq(&cnt);
-	}
 }
 
 void hz_callback(TimerHandle_t timer)
 {
-	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5); // TODO: Remove
 	atomic_inc(&timestamp);
 }
 
@@ -248,7 +244,7 @@ int main(void)
   w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.url_ota);
-  sht20_init(&sht, &hi2c2, GPIOA, GPIO_PIN_7);
+  aht20_init(&aht, &hi2c2, GPIOB, GPIO_PIN_1 /* 0x70 */);
   tmpx75_init(&tmp, &hi2c2, GPIOB, GPIO_PIN_1, 0x9E);
   counter_init(&cnt);
 
@@ -258,7 +254,7 @@ int main(void)
   sens.qhum = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.cnt = &cnt;
   sens.tmp = &tmp;
-  sens.sht = &sht;
+  sens.aht = &aht;
   sens.timestamp = &timestamp;
   sens.actual = &actual;
 
@@ -590,10 +586,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1|GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|GPIO_PIN_4|GPIO_PIN_5|RST_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|RST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(SPI2_CS_GPIO_Port, SPI2_CS_Pin, GPIO_PIN_SET);
@@ -611,17 +607,15 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_7;
+  /*Configure GPIO pin : PA1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB1 SPI2_CS_Pin PB4 PB5
-                           RST_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|SPI2_CS_Pin|GPIO_PIN_4|GPIO_PIN_5
-                          |RST_Pin;
+  /*Configure GPIO pins : PB1 SPI2_CS_Pin RST_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|SPI2_CS_Pin|RST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

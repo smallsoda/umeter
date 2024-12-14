@@ -196,8 +196,6 @@ int appiface(void *iface)
 	char *tmp;
 	int ret;
 
-	HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4); // TODO: Remove
-
 	tmp = pvPortMalloc(256); // NOTE: ?
 	if (!tmp)
 		return -1;

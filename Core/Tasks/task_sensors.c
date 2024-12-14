@@ -10,13 +10,13 @@
 #include <stdbool.h>
 
 #include "tmpx75.h"
-#include "sht20.h"
+#include "aht20.h"
 
 enum
 {
 	AVAIL_CNT    = 0x01,
 	AVAIL_TMPx75 = 0x02,
-	AVAIL_SHT20  = 0x04
+	AVAIL_AHT20  = 0x04
 };
 
 enum
@@ -57,10 +57,10 @@ static void task(void *argument)
 	if (!ret)
 		avail |= AVAIL_TMPx75;
 
-	// SHT20
-	ret = sht20_is_available(sens->sht);
+	// AHT20
+	ret = aht20_is_available(sens->aht);
 	if (!ret)
-		avail |= AVAIL_SHT20;
+		avail |= AVAIL_AHT20;
 
 	for(;;)
 	{
@@ -74,21 +74,17 @@ static void task(void *argument)
 			count = counter(sens->cnt);
 			drdy |= DRDY_CNT;
 		}
-		if ((avail & AVAIL_TMPx75) && !(avail & AVAIL_SHT20))
+		if ((avail & AVAIL_TMPx75) && !(avail & AVAIL_AHT20))
 		{
 			ret = tmpx75_read_temp(sens->tmp, &temperature);
 			if (!ret)
 				drdy |= DRDY_TMP;
 		}
-		if (avail & AVAIL_SHT20)
+		if (avail & AVAIL_AHT20)
 		{
-			ret = sht20_read_temp(sens->sht, &temperature);
+			ret = aht20_read(sens->aht, &temperature, &humidity);
 			if (!ret)
-				drdy |= DRDY_TMP;
-
-			ret = sht20_read_hum(sens->sht, &humidity);
-			if (!ret)
-				drdy |= DRDY_HUM;
+				drdy |= DRDY_TMP | DRDY_HUM;
 		}
 
 		// Save sensor readings

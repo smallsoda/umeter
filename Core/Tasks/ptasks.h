@@ -43,7 +43,7 @@ struct sensors
 
 	struct counter *cnt;
 	struct tmpx75 *tmp;
-	struct sht20 *sht;
+	struct aht20 *aht;
 	volatile uint32_t *timestamp;
 
 	struct actual *actual;

@@ -83,7 +83,7 @@ umeter, FreeRTOS, SIM800L
                                                   ║                 ║
                                                   ╟─────────────────╢
                                            VBAT <─╢ 5V              ║
-                                            GND <─╢ 3V3 (out)       ║
+                                            3V3 <─╢ 3V3 (out)       ║
                                             GND <─╢ GND             ║
                                                   ╚═════════════════╝
 ```

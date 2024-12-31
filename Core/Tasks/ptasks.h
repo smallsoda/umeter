@@ -11,6 +11,7 @@
 #include "cmsis_os.h"
 #include "semphr.h"
 
+#include "avoltage.h"
 #include "counter.h"
 #include "sim800l.h"
 #include "siface.h"
@@ -41,6 +42,7 @@ struct sensors
 	QueueHandle_t qtmp;
 	QueueHandle_t qhum;
 
+	struct avoltage *avlt;
 	struct counter *cnt;
 	struct tmpx75 *tmp;
 	struct aht20 *aht;

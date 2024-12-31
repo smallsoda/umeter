@@ -39,15 +39,15 @@ static const osThreadAttr_t attributes = {
 };
 
 
-static void voltage_callback(int status, void *data)
-{
-	struct sim800l_voltage *vd = data;
-
-	BaseType_t woken = pdFALSE;
-	vTaskNotifyGiveFromISR(handle, &woken);
-
-	*((int *) vd->context) = status;
-}
+//static void voltage_callback(int status, void *data)
+//{
+//	struct sim800l_voltage *vd = data;
+//
+//	BaseType_t woken = pdFALSE;
+//	vTaskNotifyGiveFromISR(handle, &woken);
+//
+//	*((int *) vd->context) = status;
+//}
 
 static void http_callback(int status, void *data)
 {
@@ -120,11 +120,12 @@ static void task(void *argument)
 {
 	struct app *app = argument;
 
-	struct sim800l_voltage vd;
+//	struct sim800l_voltage vd;
 	struct sim800l_http httpd;
 	char *request;
 	char *sensor;
 	char *url;
+	int voltage;
 	int status;
 	int ret;
 
@@ -140,7 +141,7 @@ static void task(void *argument)
 	if (!request)
 		vTaskDelete(NULL);
 
-	vd.context = &status;
+//	vd.context = &status;
 	httpd.context = &status;
 
 	// <- /api/time
@@ -194,27 +195,32 @@ static void task(void *argument)
 
 	for (;;)
 	{
+//		// Voltage
+//		sim800l_voltage(app->mod, &vd, voltage_callback, 60000);
+//		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+//		if (status)
+//		{
+//			vd.voltage = 0;
+//		}
+//		else
+//		{
+//			xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
+//			app->sens->actual->voltage = vd.voltage;
+//			xSemaphoreGive(app->sens->actual->mutex);
+//		}
+
 		// Voltage
-		sim800l_voltage(app->mod, &vd, voltage_callback, 60000);
-		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-		if (status)
-		{
-			vd.voltage = 0;
-		}
-		else
-		{
-			xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
-			app->sens->actual->voltage = vd.voltage;
-			xSemaphoreGive(app->sens->actual->mutex);
-		}
+		xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
+		voltage = app->sens->actual->voltage;
+		xSemaphoreGive(app->sens->actual->mutex);
 
 		// -> /api/data
 		strjson_init(request);
 		strjson_str(request, "uid", app->params->mcu_uid); // ?
 		strjson_uint(request, "ts", *app->timestamp);
 		strjson_uint(request, "ticks", xTaskGetTickCount());
-		if (vd.voltage)
-			strjson_int(request, "bat", vd.voltage);
+		if (voltage)
+			strjson_int(request, "bat", voltage);
 		sensor_base64(app->sens->qcnt, sensor); /* Counter */
 		if (*sensor)
 			strjson_str(request, "count", sensor);

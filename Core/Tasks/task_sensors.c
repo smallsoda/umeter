@@ -14,16 +14,18 @@
 
 enum
 {
-	AVAIL_CNT    = 0x01,
-	AVAIL_TMPx75 = 0x02,
-	AVAIL_AHT20  = 0x04
+	AVAIL_VOL    = 0x01,
+	AVAIL_CNT    = 0x02,
+	AVAIL_TMPx75 = 0x04,
+	AVAIL_AHT20  = 0x08
 };
 
 enum
 {
-	DRDY_CNT = 0x01,
-	DRDY_TMP = 0x02,
-	DRDY_HUM = 0x04
+	DRDY_VOL = 0x01,
+	DRDY_CNT = 0x02,
+	DRDY_TMP = 0x04,
+	DRDY_HUM = 0x08
 };
 
 static osThreadId_t handle;
@@ -45,9 +47,15 @@ static void task(void *argument)
 	int32_t temperature = 0;
 	int32_t humidity = 0;
 	uint32_t count = 0;
+	int voltage = 0;
 
 	TickType_t ticks = xTaskGetTickCount();
 	TickType_t wake = xTaskGetTickCount();
+
+	// Voltage
+	ret = avoltage_calib(sens->avlt);
+	if (!ret)
+		avail |= AVAIL_VOL;
 
 	// Counter
 	avail |= AVAIL_CNT;
@@ -69,6 +77,12 @@ static void task(void *argument)
 		// Update sensor readings
 		drdy = 0;
 
+		if (avail & AVAIL_VOL)
+		{
+			voltage = avoltage(sens->avlt);
+			if (voltage >= 0)
+				drdy |= DRDY_VOL;
+		}
 		if (avail & AVAIL_CNT)
 		{
 			count = counter(sens->cnt);
@@ -89,6 +103,8 @@ static void task(void *argument)
 
 		// Save sensor readings
 		xSemaphoreTake(sens->actual->mutex, portMAX_DELAY);
+		if (drdy & DRDY_VOL)
+			sens->actual->voltage = voltage;
 		if (drdy & DRDY_CNT)
 			sens->actual->count = count;
 		if (drdy & DRDY_TMP)

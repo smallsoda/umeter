@@ -2,7 +2,7 @@
  * Parameters (FLASH storage)
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #ifndef PARAMS_H_
@@ -22,7 +22,7 @@
 #define PARAMS_FW_B1 0
 #define PARAMS_FW_B2 0
 #define PARAMS_FW_B3 2
-#define PARAMS_FW_B4 1
+#define PARAMS_FW_B4 2
 
 #define PARAMS_FW_VERSION \
 		(((uint32_t) PARAMS_FW_B1 << 24) | \

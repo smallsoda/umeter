@@ -2,7 +2,7 @@
  * Counter task
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "ptasks.h"
@@ -58,6 +58,7 @@ static void task(void *argument)
 		avail |= AVAIL_VOL;
 
 	// Counter
+	counter_power_on(sens->cnt);
 	avail |= AVAIL_CNT;
 
 	// TMPx75

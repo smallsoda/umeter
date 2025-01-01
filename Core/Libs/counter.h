@@ -2,22 +2,27 @@
  * Pulse counter
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #ifndef COUNTER_H_
 #define COUNTER_H_
 
-#include <stdint.h>
+#include "stm32f1xx_hal.h"
 
 struct counter
 {
 	volatile uint32_t count;
+	GPIO_TypeDef *pwr_port;
+	uint16_t pwr_pin;
 };
 
 
-void counter_init(struct counter *cnt);
+void counter_init(struct counter *cnt, GPIO_TypeDef *pwr_port,
+		uint16_t pwr_pin);
 void counter_irq(struct counter *cnt);
+void counter_power_on(struct counter *cnt);
+void counter_power_off(struct counter *cnt);
 uint32_t counter(struct counter *cnt);
 
 #endif /* COUNTER_H_ */

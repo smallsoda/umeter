@@ -252,7 +252,7 @@ int main(void)
   ota_init(&ota, &mod, &mem, params.url_ota);
   aht20_init(&aht, &hi2c2, GPIOB, GPIO_PIN_1 /* 0x70 */);
   tmpx75_init(&tmp, &hi2c2, GPIOB, GPIO_PIN_1, 0x9E);
-  counter_init(&cnt);
+  counter_init(&cnt, GPIOA, GPIO_PIN_1);
   avoltage_init(&avlt, &hadc1, 2);
 
   // sens

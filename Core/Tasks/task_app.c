@@ -61,10 +61,10 @@ static void http_callback(int status, void *data)
 
 static void blink(void)
 {
-//	osDelay(100);
-//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-//	osDelay(100);
-//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+	osDelay(100);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+	osDelay(100);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 }
 
 // https://github.com/zserge/jsmn/blob/master/example/simple.c

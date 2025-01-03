@@ -2,7 +2,7 @@
  * Blink task
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "ptasks.h"
@@ -16,27 +16,9 @@ static const osThreadAttr_t attributes = {
 };
 
 
-static void blink(void)
-{
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
-
-	for(int i = 0; i < 10; i++)
-	{
-		osDelay(200);
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_4);
-		HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_5);
-	}
-
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, GPIO_PIN_RESET);
-}
-
 static void task(void *argument)
 {
 	IWDG_HandleTypeDef *wdg = argument;
-
-	blink();
 
 	for(;;)
 	{

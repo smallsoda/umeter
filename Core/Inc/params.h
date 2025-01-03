@@ -22,7 +22,7 @@
 #define PARAMS_FW_B1 0
 #define PARAMS_FW_B2 0
 #define PARAMS_FW_B3 2
-#define PARAMS_FW_B4 4
+#define PARAMS_FW_B4 5
 
 #define PARAMS_FW_VERSION \
 		(((uint32_t) PARAMS_FW_B1 << 24) | \
@@ -48,7 +48,7 @@ typedef struct
 	char mcu_uid[PARAMS_MCU_UID_SIZE];
 	uint32_t period_app;
 	uint32_t period_sen;
-	uint32_t mtime_counter;
+	uint32_t mtime_count;
 } __attribute__((aligned(8))) params_t;
 
 void params_get(params_t *params);

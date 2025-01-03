@@ -7,10 +7,14 @@
 
 #include "ptasks.h"
 
-#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "tmpx75.h"
 #include "aht20.h"
+
+#include "logger.h"
+#define TAG "SENSORS"
 
 enum
 {
@@ -49,6 +53,8 @@ static void task(void *argument)
 	uint32_t count = 0;
 	int voltage = 0;
 
+	char *savail;
+
 	TickType_t wake = xTaskGetTickCount();
 
 	// Voltage
@@ -69,6 +75,20 @@ static void task(void *argument)
 	if (!ret)
 		avail |= AVAIL_AHT20;
 
+	// Available sensors
+	xSemaphoreTake(sens->actual->mutex, portMAX_DELAY);
+	sens->actual->avail = avail;
+	xSemaphoreGive(sens->actual->mutex);
+
+	savail = pvPortMalloc(sizeof(avail) * 8 + 2); // + "b\0"
+	if (savail)
+	{
+		itoa(avail, savail, 2);
+		strcat(savail, "b");
+		logger_add_str(sens->logger, TAG, false, savail);
+		vPortFree(savail);
+	}
+
 	for(;;)
 	{
 		// Init value (for counter only)
@@ -82,7 +102,7 @@ static void task(void *argument)
 
 		// Measurement time delay (for counter only)
 		if (avail & AVAIL_CNT)
-			osDelay(sens->params->mtime_counter * 1000);
+			osDelay(sens->params->mtime_count * 1000);
 
 		// Update sensor readings
 		drdy = 0;
@@ -98,7 +118,7 @@ static void task(void *argument)
 			count = counter(sens->cnt) - count;
 			drdy |= DRDY_CNT;
 
-			if (sens->params->period_sen != sens->params->mtime_counter)
+			if (sens->params->period_sen != sens->params->mtime_count)
 				counter_power_off(sens->cnt);
 		}
 		if ((avail & AVAIL_TMPx75) && !(avail & AVAIL_AHT20))

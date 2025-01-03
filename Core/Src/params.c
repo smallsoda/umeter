@@ -84,7 +84,7 @@ static void set_default(params_t *params)
 	uid_string(params->mcu_uid);
 	params->period_app = 60 * 5;
 	params->period_sen = 60;
-	params->mtime_counter = 10;
+	params->mtime_count = 10;
 }
 
 void params_init(void)

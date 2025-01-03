@@ -30,6 +30,8 @@ struct actual
 {
 	SemaphoreHandle_t mutex;
 
+	int avail;
+
 	int voltage;
 	uint32_t count;
 	int32_t humidity;
@@ -49,6 +51,7 @@ struct sensors
 	volatile uint32_t *timestamp;
 	params_t *params;
 
+	struct logger *logger;
 	struct actual *actual;
 };
 

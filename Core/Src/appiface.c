@@ -106,9 +106,9 @@ static int parse(struct appiface *appif, const char *request, char *response)
 			strjson_uint(response, "period_app", appif->uparams.period_app);
 		else if (jsoneq(request, tparam, "period_sen") == 0)
 			strjson_uint(response, "period_sen", appif->uparams.period_sen);
-		else if (jsoneq(request, tparam, "meas_time_counter") == 0)
-			strjson_uint(response, "mtime_counter",
-					appif->uparams.mtime_counter);
+		else if (jsoneq(request, tparam, "mtime_count") == 0)
+			strjson_uint(response, "mtime_count",
+					appif->uparams.mtime_count);
 		else if (jsoneq(request, tparam, "bat") == 0)
 		{
 			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
@@ -178,12 +178,12 @@ static int parse(struct appiface *appif, const char *request, char *response)
 			if (tmp == 0)
 				return -1;
 
-			if (tmp < appif->uparams.mtime_counter)
+			if (tmp < appif->uparams.mtime_count)
 				return -1;
 
 			appif->uparams.period_sen = tmp;
 		}
-		else if (jsoneq(request, tparam, "mtime_counter") == 0)
+		else if (jsoneq(request, tparam, "mtime_count") == 0)
 		{
 			tmp = strtoul(request + tvalue->start, NULL, 10);
 			if (tmp == 0)
@@ -192,7 +192,7 @@ static int parse(struct appiface *appif, const char *request, char *response)
 			if (tmp > appif->uparams.period_sen)
 				return -1;
 
-			appif->uparams.mtime_counter = tmp;
+			appif->uparams.mtime_count = tmp;
 		}
 		else
 		{

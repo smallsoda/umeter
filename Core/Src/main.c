@@ -256,6 +256,7 @@ int main(void)
   avoltage_init(&avlt, &hadc1, 2);
 
   // sens
+  memset(&sens, 0, sizeof(sens));
   sens.qcnt = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.qtmp = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.qhum = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
@@ -265,9 +266,11 @@ int main(void)
   sens.aht = &aht;
   sens.timestamp = &timestamp;
   sens.params = &params;
+  sens.logger = &logger;
   sens.actual = &actual;
 
   // app
+  memset(&app, 0, sizeof(app));
   app.timestamp = &timestamp;
   app.params = &params;
   app.logger = &logger;

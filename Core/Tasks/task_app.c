@@ -128,6 +128,7 @@ static void task(void *argument)
 	char *url;
 	int voltage;
 	int status;
+	int avail;
 	int ret;
 
 	request = pvPortMalloc(512); // NOTE: ?
@@ -167,6 +168,11 @@ static void task(void *argument)
 	if (httpd.response)
 		vPortFree(httpd.response);
 
+	// Available sensors
+	xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
+	avail = app->sens->actual->avail;
+	xSemaphoreGive(app->sens->actual->mutex);
+
 	// -> /api/info
 	strjson_init(request);
 	strjson_str(request, "uid", app->params->mcu_uid); // ?
@@ -182,7 +188,8 @@ static void task(void *argument)
 	strjson_str(request, "url_app", app->params->url_app);
 	strjson_uint(request, "period_app", app->params->period_app);
 	strjson_uint(request, "period_sen", app->params->period_sen);
-	strjson_uint(request, "mtime_counter", app->params->mtime_counter);
+	strjson_uint(request, "mtime_cnt", app->params->mtime_count);
+	strjson_int(request, "sens", avail);
 
 	strcpy(url, app->params->url_app);
 	strcat(url, "/api/info");

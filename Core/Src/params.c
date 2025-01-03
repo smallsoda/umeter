@@ -2,7 +2,7 @@
  * Parameters (FLASH storage)
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include <params.h>
@@ -82,7 +82,9 @@ static void set_default(params_t *params)
 	strcpy(params->url_ota, "ota.proshutinsky.ru");
 	strcpy(params->url_app, "app.proshutinsky.ru");
 	uid_string(params->mcu_uid);
-	params->period = 60 * 5;
+	params->period_app = 60 * 5;
+	params->period_sen = 60;
+	params->mtime_counter = 10;
 }
 
 void params_init(void)

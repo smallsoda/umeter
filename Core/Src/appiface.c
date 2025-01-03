@@ -2,7 +2,7 @@
  * Application interface
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "appiface.h"
@@ -102,8 +102,13 @@ static int parse(struct appiface *appif, const char *request, char *response)
 			strjson_str(response, "url_ota", appif->uparams.url_ota);
 		else if (jsoneq(request, tparam, "url_app") == 0)
 			strjson_str(response, "url_app", appif->uparams.url_app);
-		else if (jsoneq(request, tparam, "period") == 0)
-			strjson_uint(response, "period", appif->uparams.period);
+		else if (jsoneq(request, tparam, "period_app") == 0)
+			strjson_uint(response, "period_app", appif->uparams.period_app);
+		else if (jsoneq(request, tparam, "period_sen") == 0)
+			strjson_uint(response, "period_sen", appif->uparams.period_sen);
+		else if (jsoneq(request, tparam, "meas_time_counter") == 0)
+			strjson_uint(response, "mtime_counter",
+					appif->uparams.mtime_counter);
 		else if (jsoneq(request, tparam, "bat") == 0)
 		{
 			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
@@ -159,13 +164,35 @@ static int parse(struct appiface *appif, const char *request, char *response)
 					(sizeof(appif->uparams.url_app) - 1) : len);
 			appif->uparams.url_app[len] = '\0';
 		}
-		else if (jsoneq(request, tparam, "period") == 0)
+		else if (jsoneq(request, tparam, "period_app") == 0)
 		{
 			tmp = strtoul(request + tvalue->start, NULL, 10);
 			if (tmp == 0)
 				return -1;
 
-			appif->uparams.period = tmp;
+			appif->uparams.period_app = tmp;
+		}
+		else if (jsoneq(request, tparam, "period_sen") == 0)
+		{
+			tmp = strtoul(request + tvalue->start, NULL, 10);
+			if (tmp == 0)
+				return -1;
+
+			if (tmp < appif->uparams.mtime_counter)
+				return -1;
+
+			appif->uparams.period_sen = tmp;
+		}
+		else if (jsoneq(request, tparam, "mtime_counter") == 0)
+		{
+			tmp = strtoul(request + tvalue->start, NULL, 10);
+			if (tmp == 0)
+				return -1;
+
+			if (tmp > appif->uparams.period_sen)
+				return -1;
+
+			appif->uparams.mtime_counter = tmp;
 		}
 		else
 		{

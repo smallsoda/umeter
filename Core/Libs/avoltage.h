@@ -2,7 +2,7 @@
  * Analog voltage meter
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #ifndef AVOLTAGE_H_
@@ -10,8 +10,12 @@
 
 #include "stm32f1xx_hal.h"
 
+#include "cmsis_os.h"
+#include "semphr.h"
+
 struct avoltage
 {
+	SemaphoreHandle_t mutex;
 	ADC_HandleTypeDef *adc;
 	int ratio;
 };

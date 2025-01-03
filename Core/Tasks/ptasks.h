@@ -2,7 +2,7 @@
  * Application tasks
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #ifndef UMETER_TASKS_H_
@@ -47,6 +47,7 @@ struct sensors
 	struct tmpx75 *tmp;
 	struct aht20 *aht;
 	volatile uint32_t *timestamp;
+	params_t *params;
 
 	struct actual *actual;
 };

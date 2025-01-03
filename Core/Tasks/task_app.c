@@ -2,7 +2,7 @@
  * Application task
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "ptasks.h"
@@ -61,10 +61,10 @@ static void http_callback(int status, void *data)
 
 static void blink(void)
 {
-	osDelay(100);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
-	osDelay(100);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+//	osDelay(100);
+//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+//	osDelay(100);
+//	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 }
 
 // https://github.com/zserge/jsmn/blob/master/example/simple.c
@@ -122,6 +122,7 @@ static void task(void *argument)
 
 //	struct sim800l_voltage vd;
 	struct sim800l_http httpd;
+	TickType_t wake;
 	char *request;
 	char *sensor;
 	char *url;
@@ -179,7 +180,9 @@ static void task(void *argument)
 	strjson_str(request, "apn", app->params->apn);
 	strjson_str(request, "url_ota", app->params->url_ota);
 	strjson_str(request, "url_app", app->params->url_app);
-	strjson_uint(request, "period", app->params->period);
+	strjson_uint(request, "period_app", app->params->period_app);
+	strjson_uint(request, "period_sen", app->params->period_sen);
+	strjson_uint(request, "mtime_counter", app->params->mtime_counter);
 
 	strcpy(url, app->params->url_app);
 	strcat(url, "/api/info");
@@ -192,6 +195,8 @@ static void task(void *argument)
 
 	if (httpd.response)
 		vPortFree(httpd.response);
+
+	wake = xTaskGetTickCount();
 
 	for (;;)
 	{
@@ -244,7 +249,7 @@ static void task(void *argument)
 			vPortFree(httpd.response);
 
 		blink();
-		osDelay(app->params->period * 1000);
+		vTaskDelayUntil(&wake, pdMS_TO_TICKS(app->params->period_app * 1000));
 	}
 }
 

@@ -49,7 +49,6 @@ static void task(void *argument)
 	uint32_t count = 0;
 	int voltage = 0;
 
-	TickType_t ticks = xTaskGetTickCount();
 	TickType_t wake = xTaskGetTickCount();
 
 	// Voltage
@@ -58,7 +57,6 @@ static void task(void *argument)
 		avail |= AVAIL_VOL;
 
 	// Counter
-	counter_power_on(sens->cnt);
 	avail |= AVAIL_CNT;
 
 	// TMPx75
@@ -73,7 +71,18 @@ static void task(void *argument)
 
 	for(;;)
 	{
-		vTaskDelayUntil(&wake, pdMS_TO_TICKS(1000));
+		// Init value (for counter only)
+		if (avail & AVAIL_CNT)
+		{
+			counter_power_on(sens->cnt);
+			osDelay(1);
+
+			count = counter(sens->cnt);
+		}
+
+		// Measurement time delay (for counter only)
+		if (avail & AVAIL_CNT)
+			osDelay(sens->params->mtime_counter * 1000);
 
 		// Update sensor readings
 		drdy = 0;
@@ -86,8 +95,11 @@ static void task(void *argument)
 		}
 		if (avail & AVAIL_CNT)
 		{
-			count = counter(sens->cnt);
+			count = counter(sens->cnt) - count;
 			drdy |= DRDY_CNT;
+
+			if (sens->params->period_sen != sens->params->mtime_counter)
+				counter_power_off(sens->cnt);
 		}
 		if ((avail & AVAIL_TMPx75) && !(avail & AVAIL_AHT20))
 		{
@@ -114,36 +126,27 @@ static void task(void *argument)
 			sens->actual->humidity = humidity;
 		xSemaphoreGive(sens->actual->mutex);
 
-		/**
-		 * TODO: Use COUNTER_QUEUE_LEN and app->params->period to determine
-		 * optimal delay value
-		 */
 		// Add sensor readings to queues
-		if ((xTaskGetTickCount() - ticks) >= pdMS_TO_TICKS(60000))
+		if (drdy & DRDY_CNT)
 		{
-			ticks = xTaskGetTickCount();
-
-			if (drdy & DRDY_CNT)
-			{
-				item.value = count;
-				item.timestamp = *sens->timestamp;
-				xQueueSendToBack(sens->qcnt, &item, 0);
-			}
-
-			if (drdy & DRDY_TMP)
-			{
-				item.value = temperature;
-				item.timestamp = *sens->timestamp;
-				xQueueSendToBack(sens->qtmp, &item, 0);
-			}
-
-			if (drdy & DRDY_HUM)
-			{
-				item.value = humidity;
-				item.timestamp = *sens->timestamp;
-				xQueueSendToBack(sens->qhum, &item, 0);
-			}
+			item.value = count;
+			item.timestamp = *sens->timestamp;
+			xQueueSendToBack(sens->qcnt, &item, 0);
 		}
+		if (drdy & DRDY_TMP)
+		{
+			item.value = temperature;
+			item.timestamp = *sens->timestamp;
+			xQueueSendToBack(sens->qtmp, &item, 0);
+		}
+		if (drdy & DRDY_HUM)
+		{
+			item.value = humidity;
+			item.timestamp = *sens->timestamp;
+			xQueueSendToBack(sens->qhum, &item, 0);
+		}
+
+		vTaskDelayUntil(&wake, pdMS_TO_TICKS(sens->params->period_sen * 1000));
 	}
 }
 

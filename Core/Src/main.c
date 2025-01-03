@@ -264,6 +264,7 @@ int main(void)
   sens.tmp = &tmp;
   sens.aht = &aht;
   sens.timestamp = &timestamp;
+  sens.params = &params;
   sens.actual = &actual;
 
   // app

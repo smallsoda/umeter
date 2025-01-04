@@ -188,7 +188,7 @@ static void task(void *argument)
 	strjson_str(request, "url_app", app->params->url_app);
 	strjson_uint(request, "period_app", app->params->period_app);
 	strjson_uint(request, "period_sen", app->params->period_sen);
-	strjson_uint(request, "mtime_cnt", app->params->mtime_count);
+	strjson_uint(request, "mtime_count", app->params->mtime_count);
 	strjson_int(request, "sens", avail);
 
 	strcpy(url, app->params->url_app);

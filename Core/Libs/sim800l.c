@@ -263,6 +263,7 @@ static bool parse_battery_charge(struct sim800l *mod, timeout_t timeout)
 }
 
 // "\r\nOK\r\n\r\n+HTTPACTION: 0,200,293\r\n"
+// "\r\nOK\r\n 1,200,16\r\n" ?
 // @retval: HTTP status code on success or -1 on failure
 static int parse_http_action(struct sim800l *mod, int* len, timeout_t timeout)
 {

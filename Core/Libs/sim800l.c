@@ -2,7 +2,7 @@
  * SIM800L library
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "sim800l.h"
@@ -15,7 +15,7 @@
 
 #define MAX_ERRORS 5
 
-#define CMD_BUFFER_SIZE 64
+#define CMD_BUFFER_SIZE 96
 
 /*
  * Minimum functionality mode
@@ -438,6 +438,12 @@ inline static char *get_http_request(struct sim800l *mod)
 	return data->request;
 }
 
+inline static char *get_http_auth(struct sim800l *mod)
+{
+	struct sim800l_http *data = mod->task.data;
+	return data->auth;
+}
+
 /******************************************************************************/
 void sim800l_task(struct sim800l *mod)
 {
@@ -686,6 +692,19 @@ void sim800l_task(struct sim800l *mod)
 
 			// SSL does not work
 			// \r\nOK\r\n\r\n+HTTPACTION: 0,606,0\r\n
+
+			// "Authorization" header
+			if (get_http_auth(mod))
+			{
+				strcpy(cmd, "AT+HTTPPARA=USERDATA,Authorization: ");
+				strcat(cmd, get_http_auth(mod));
+				transmit(mod, cmd);
+				if (!compare_buffer_beginning(mod, "\r\nOK\r\n", 2000))
+				{
+					state(mod, STATE_IDLE, STATUS_ERROR);
+					break;
+				}
+			}
 
 			// HTTP POST
 			if (get_http_method(mod))

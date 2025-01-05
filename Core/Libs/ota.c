@@ -2,7 +2,7 @@
  * Over-the-air (OTA) firmware update
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "ota.h"
@@ -148,6 +148,7 @@ static int request_list(struct ota *ota, struct sim800l_http *http)
 	strcpy(http->url, ota->url);
 	strcat(http->url, "/api/list?name=");
 	strcat(http->url, PARAMS_DEVICE_NAME);
+	http->auth = NULL;
 	http->request = NULL;
 	http->response = NULL;
 	http->context = &ota->task;
@@ -165,6 +166,7 @@ static int request_file(struct ota *ota, struct sim800l_http *http,
 	utoa(addr, &http->url[strlen(http->url)], 10);
 	strcat(http->url, "&size=");
 	utoa(size, &http->url[strlen(http->url)], 10);
+	http->auth = NULL;
 	http->request = NULL;
 	http->response = NULL;
 	http->context = &ota->task;

@@ -2,7 +2,7 @@
  * SIM800L library
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #ifndef SIM800L_H_
@@ -88,6 +88,8 @@ struct sim800l_http
 	char *request;
 	char *response;
 	size_t rlen;
+
+	char *auth;
 
 	void *context;
 };

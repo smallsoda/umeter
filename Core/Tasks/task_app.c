@@ -10,6 +10,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "hmac_sha256.h"
+#include "sha256.h"
+
 #define JSMN_HEADER
 #include "jsmn.h"
 
@@ -28,13 +31,15 @@
 #define SENSORS_BUF_LEN (SENSORS_QUEUE_LEN * sizeof(struct item))
 #define SENSORS_STR_LEN (4 * ((SENSORS_BUF_LEN + 2) / 3) + 1)
 
+#define HMAC_BASE64_LEN (4 * ((SHA256_HASH_SIZE + 2) / 3) + 1)
+
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
 
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "app",
-  .stack_size = 128 * 4,
+  .stack_size = 288 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -116,6 +121,18 @@ static void sensor_base64(QueueHandle_t queue, char *buf)
 	buf[enclen] = '\0';
 }
 
+static void hmac_base64(const uint8_t* secret, const char *data, char *buf)
+{
+	uint8_t hmac[SHA256_HASH_SIZE];
+	size_t enclen;
+
+	hmac_sha256(secret, PARAMS_SECRET_SIZE, data, strlen(data), hmac,
+			SHA256_HASH_SIZE);
+
+	base64_encode((unsigned char *) hmac, SHA256_HASH_SIZE, buf, &enclen);
+	buf[enclen] = '\0';
+}
+
 static void task(void *argument)
 {
 	struct app *app = argument;
@@ -125,6 +142,7 @@ static void task(void *argument)
 	TickType_t wake;
 	char *request;
 	char *sensor;
+	char *hmac;
 	char *url;
 	int voltage;
 	int status;
@@ -139,6 +157,10 @@ static void task(void *argument)
 	if (!sensor)
 		vTaskDelete(NULL);
 
+	hmac = pvPortMalloc(HMAC_BASE64_LEN);
+	if (!hmac)
+		vTaskDelete(NULL);
+
 	url = pvPortMalloc(PARAMS_APP_URL_SIZE + 32);
 	if (!request)
 		vTaskDelete(NULL);
@@ -150,6 +172,7 @@ static void task(void *argument)
 	strcpy(url, app->params->url_app);
 	strcat(url, "/api/time");
 	httpd.url = url;
+	httpd.auth = NULL;
 	httpd.request = NULL;
 	httpd.response = NULL;
 
@@ -193,7 +216,9 @@ static void task(void *argument)
 
 	strcpy(url, app->params->url_app);
 	strcat(url, "/api/info");
+	hmac_base64(app->params->secret, request, hmac);
 	httpd.url = url;
+	httpd.auth = hmac;
 	httpd.request = request;
 	httpd.response = NULL;
 
@@ -245,7 +270,9 @@ static void task(void *argument)
 
 		strcpy(url, app->params->url_app);
 		strcat(url, "/api/data");
+		hmac_base64(app->params->secret, request, hmac);
 		httpd.url = url;
+		httpd.auth = hmac;
 		httpd.request = request;
 		httpd.response = NULL;
 

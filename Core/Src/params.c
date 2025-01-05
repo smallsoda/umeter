@@ -82,6 +82,7 @@ static void set_default(params_t *params)
 	strcpy(params->url_ota, "ota.proshutinsky.ru");
 	strcpy(params->url_app, "app.proshutinsky.ru");
 	uid_string(params->mcu_uid);
+	memset(params->secret, 0xAB, sizeof(params->secret));
 	params->period_app = 60 * 5;
 	params->period_sen = 60;
 	params->mtime_count = 10;

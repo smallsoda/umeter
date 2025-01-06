@@ -9,13 +9,14 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #define JSMN_HEADER
 #include "jsmn.h"
 
-#include "fws.h"
-#include "params.h"
 #include "sim800l.h"
+#include "params.h"
+#include "fws.h"
 
 #define DELAY_HTTP_MS 60000
 #define DELAY_SIM800L_MS (DELAY_HTTP_MS + 30000)
@@ -34,11 +35,12 @@ extern const uint32_t *_app_len;
 
 /******************************************************************************/
 void ota_init(struct ota *ota, struct sim800l *mod, struct w25q *mem,
-		const char *url)
+		const uint8_t *secret, const char *url)
 {
 	memset(ota, 0, sizeof(*ota));
 	ota->mod = mod;
 	ota->mem = mem;
+	memcpy(ota->secret, secret, sizeof(ota->secret));
 	strcpy(ota->url, url);
 }
 
@@ -148,9 +150,11 @@ static int request_list(struct ota *ota, struct sim800l_http *http)
 	strcpy(http->url, ota->url);
 	strcat(http->url, "/api/list?name=");
 	strcat(http->url, PARAMS_DEVICE_NAME);
-	http->auth = NULL;
+	http->req_auth = NULL;
+	http->res_auth = NULL; // Unnecessary
+	http->res_auth_get = true;
 	http->request = NULL;
-	http->response = NULL;
+	http->response = NULL; // Unnecessary
 	http->context = &ota->task;
 
 	return sim800l_http(ota->mod, http, callback, DELAY_HTTP_MS);
@@ -166,9 +170,11 @@ static int request_file(struct ota *ota, struct sim800l_http *http,
 	utoa(addr, &http->url[strlen(http->url)], 10);
 	strcat(http->url, "&size=");
 	utoa(size, &http->url[strlen(http->url)], 10);
-	http->auth = NULL;
+	http->req_auth = NULL;
+	http->res_auth = NULL; // Unnecessary
+	http->res_auth_get = true;
 	http->request = NULL;
-	http->response = NULL;
+	http->response = NULL; // Unnecessary
 	http->context = &ota->task;
 
 	return sim800l_http(ota->mod, http, callback, DELAY_HTTP_MS);
@@ -242,6 +248,15 @@ static uint32_t mem_checksum(struct w25q *mem, uint32_t addr, uint32_t size)
 	return checksum;
 }
 
+static void strtolower(char *data)
+{
+	while (*data)
+	{
+		*data = tolower(*data);
+		data++;
+	}
+}
+
 /******************************************************************************/
 void ota_task(struct ota *ota)
 {
@@ -250,6 +265,7 @@ void ota_task(struct ota *ota)
 	struct fws fws;
 	uint32_t addr;
 	int retries;
+	char *hmac;
 	int ret;
 
 	if (w25q_get_manufacturer_id(ota->mem) != FWS_WINBOND_MANUFACTURER_ID)
@@ -262,7 +278,11 @@ void ota_task(struct ota *ota)
 
 	http.url = pvPortMalloc(OTA_URL_SIZE + 64);
 	if (!http.url)
-		for(;;);
+		vTaskDelete(NULL);
+
+	hmac = pvPortMalloc(HMAC_BASE64_LEN);
+	if (!hmac)
+		vTaskDelete(NULL);
 
 	for (;;)
 	{
@@ -274,10 +294,30 @@ void ota_task(struct ota *ota)
 			continue;
 		ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(DELAY_SIM800L_MS));
 
+		// Error
+		if (!http.res_auth || !http.response)
+		{
+			if (http.res_auth)
+				vPortFree(http.res_auth);
+			if (http.response)
+				vPortFree(http.response);
+			continue;
+		}
+
+		// Authorization
+		hmac_base64(ota->secret, http.response, http.rlen, hmac);
+		strtolower(hmac);
+		if (strcmp(hmac, http.res_auth) != 0)
+		{
+			vPortFree(http.res_auth);
+			vPortFree(http.response);
+			continue;
+		}
+
 		// Parse firmware list
 		ret = parse_json(http.response, &fws, filename, sizeof(filename));
-		if (http.response)
-			vPortFree(http.response);
+		vPortFree(http.res_auth);
+		vPortFree(http.response);
 
 		// No update or error
 		if (ret <= PARAMS_FW_VERSION)
@@ -302,8 +342,23 @@ void ota_task(struct ota *ota)
 			ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(DELAY_SIM800L_MS));
 
 			// Error
-			if (!http.response)
+			if (!http.res_auth || !http.response)
 			{
+				if (http.res_auth)
+					vPortFree(http.res_auth);
+				if (http.response)
+					vPortFree(http.response);
+				retries--;
+				continue; /* while */
+			}
+
+			// Authorization
+			hmac_base64(ota->secret, http.response, http.rlen, hmac);
+			strtolower(hmac);
+			if (strcmp(hmac, http.res_auth) != 0)
+			{
+				vPortFree(http.res_auth);
+				vPortFree(http.response);
 				retries--;
 				continue; /* while */
 			}
@@ -315,8 +370,8 @@ void ota_task(struct ota *ota)
 			addr += http.rlen;
 			retries = RETRIES; // Reset retries
 
-			if (http.response)
-				vPortFree(http.response);
+			vPortFree(http.res_auth);
+			vPortFree(http.response);
 		}
 
 		// Expand to a multiple of 4

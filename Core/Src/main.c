@@ -249,7 +249,7 @@ int main(void)
   logger_init(&logger, &siface);
   w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
-  ota_init(&ota, &mod, &mem, params.url_ota);
+  ota_init(&ota, &mod, &mem, params.secret, params.url_ota);
   aht20_init(&aht, &hi2c2, GPIOB, GPIO_PIN_1 /* 0x70 */);
   tmpx75_init(&tmp, &hi2c2, GPIOB, GPIO_PIN_1, 0x9E);
   counter_init(&cnt, GPIOA, GPIO_PIN_1);

@@ -9,9 +9,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-
-#include "hmac_sha256.h"
-#include "sha256.h"
+#include <ctype.h>
 
 #define JSMN_HEADER
 #include "jsmn.h"
@@ -21,6 +19,7 @@
 #include "tmpx75.h"
 #include "params.h"
 #include "main.h"
+#include "hmac.h"
 #include "fws.h"
 
 #include "logger.h"
@@ -30,8 +29,6 @@
 
 #define SENSORS_BUF_LEN (SENSORS_QUEUE_LEN * sizeof(struct item))
 #define SENSORS_STR_LEN (4 * ((SENSORS_BUF_LEN + 2) / 3) + 1)
-
-#define HMAC_BASE64_LEN (4 * ((SHA256_HASH_SIZE + 2) / 3) + 1)
 
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
@@ -121,16 +118,13 @@ static void sensor_base64(QueueHandle_t queue, char *buf)
 	buf[enclen] = '\0';
 }
 
-static void hmac_base64(const uint8_t* secret, const char *data, char *buf)
+static void strtolower(char *data)
 {
-	uint8_t hmac[SHA256_HASH_SIZE];
-	size_t enclen;
-
-	hmac_sha256(secret, PARAMS_SECRET_SIZE, data, strlen(data), hmac,
-			SHA256_HASH_SIZE);
-
-	base64_encode((unsigned char *) hmac, SHA256_HASH_SIZE, buf, &enclen);
-	buf[enclen] = '\0';
+	while (*data)
+	{
+		*data = tolower(*data);
+		data++;
+	}
 }
 
 static void task(void *argument)
@@ -172,22 +166,33 @@ static void task(void *argument)
 	strcpy(url, app->params->url_app);
 	strcat(url, "/api/time");
 	httpd.url = url;
-	httpd.auth = NULL;
+	httpd.req_auth = NULL;
+	httpd.res_auth = NULL; // Unnecessary
+	httpd.res_auth_get = true;
 	httpd.request = NULL;
-	httpd.response = NULL;
+	httpd.response = NULL; // Unnecessary
 
 	sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_2MIN);
 	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-	if (!status)
+	if (!status && httpd.res_auth)
 	{
 		uint32_t temp;
-		ret = parse_json_time(httpd.response, &temp);
-		if (!ret)
-			*app->timestamp = temp;
 
-		logger_add_str(app->logger, TAG, false, httpd.response);
+		// NOTE: Ignore case of characters
+		hmac_base64(app->params->secret, httpd.response, httpd.rlen, hmac);
+		strtolower(hmac);
+		if (strcmp(hmac, httpd.res_auth) == 0)
+		{
+			ret = parse_json_time(httpd.response, &temp);
+			if (!ret)
+				*app->timestamp = temp;
+
+			logger_add_str(app->logger, TAG, false, httpd.response);
+		}
 	}
+	if (httpd.res_auth)
+		vPortFree(httpd.res_auth);
 	if (httpd.response)
 		vPortFree(httpd.response);
 
@@ -216,11 +221,14 @@ static void task(void *argument)
 
 	strcpy(url, app->params->url_app);
 	strcat(url, "/api/info");
-	hmac_base64(app->params->secret, request, hmac);
+	hmac_base64(app->params->secret, request, strlen(request), hmac);
+
 	httpd.url = url;
-	httpd.auth = hmac;
+	httpd.req_auth = hmac;
+	httpd.res_auth = NULL; // Unnecessary
+	httpd.res_auth_get = false;
 	httpd.request = request;
-	httpd.response = NULL;
+	httpd.response = NULL; // Unnecessary
 
 	sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_2MIN);
 	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -270,11 +278,13 @@ static void task(void *argument)
 
 		strcpy(url, app->params->url_app);
 		strcat(url, "/api/data");
-		hmac_base64(app->params->secret, request, hmac);
+		hmac_base64(app->params->secret, request, strlen(request), hmac);
 		httpd.url = url;
-		httpd.auth = hmac;
+		httpd.req_auth = hmac;
+		httpd.res_auth = NULL; // Unnecessary
+		httpd.res_auth_get = false;
 		httpd.request = request;
-		httpd.response = NULL;
+		httpd.response = NULL; // Unnecessary
 
 		sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_1MIN);
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);

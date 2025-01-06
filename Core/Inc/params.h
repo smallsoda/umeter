@@ -9,9 +9,8 @@
 #define PARAMS_H_
 
 #include "sim800l.h"
+#include "hmac.h"
 #include "ota.h"
-
-#include "sha256.h"
 
 #if __has_include("gitcommit.h")
 #include "gitcommit.h"
@@ -24,7 +23,7 @@
 #define PARAMS_FW_B1 0
 #define PARAMS_FW_B2 0
 #define PARAMS_FW_B3 2
-#define PARAMS_FW_B4 7
+#define PARAMS_FW_B4 8
 
 #define PARAMS_FW_VERSION \
 		(((uint32_t) PARAMS_FW_B1 << 24) | \
@@ -37,7 +36,6 @@
 
 #define PARAMS_APP_URL_SIZE 64
 #define PARAMS_MCU_UID_SIZE 32
-#define PARAMS_SECRET_SIZE  SHA256_HASH_SIZE
 
 typedef struct
 {
@@ -49,7 +47,7 @@ typedef struct
 	char url_ota[OTA_URL_SIZE];
 	char url_app[PARAMS_APP_URL_SIZE];
 	char mcu_uid[PARAMS_MCU_UID_SIZE];
-	uint8_t secret[PARAMS_SECRET_SIZE];
+	uint8_t secret[HMAC_SECRET_SIZE];
 	uint32_t period_app;
 	uint32_t period_sen;
 	uint32_t mtime_count;

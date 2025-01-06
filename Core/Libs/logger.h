@@ -2,7 +2,7 @@
  * Logger
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #ifndef LOGGER_H_
@@ -23,10 +23,10 @@ struct logger
 void logger_init(struct logger *logger, struct siface *siface);
 
 #ifdef LOGGER
-int logger_add(struct logger *logger, const char *tag, bool big,
+int logger_add(struct logger *logger, const char *tag, bool full,
 		const char *buf, size_t len);
 #else
-inline static int logger_add(struct logger *logger, const char *tag, bool big,
+inline static int logger_add(struct logger *logger, const char *tag, bool full,
 		const char *buf, size_t len)
 {
 	return 0;
@@ -34,11 +34,11 @@ inline static int logger_add(struct logger *logger, const char *tag, bool big,
 #endif
 
 #ifdef LOGGER
-int logger_add_str(struct logger *logger, const char *tag, bool big,
+int logger_add_str(struct logger *logger, const char *tag, bool full,
 		const char *buf);
 #else
 inline static int logger_add_str(struct logger *logger, const char *tag,
-		bool big, const char *buf)
+		bool full, const char *buf)
 {
 	return 0;
 }

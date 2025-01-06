@@ -2,7 +2,7 @@
  * Logger
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "logger.h"
@@ -25,7 +25,7 @@ void logger_init(struct logger *logger, struct siface *siface)
 
 /******************************************************************************/
 #ifdef LOGGER
-int logger_add(struct logger *logger, const char *tag, bool big,
+int logger_add(struct logger *logger, const char *tag, bool full,
 		const char *buf, size_t len)
 {
 	char ticks[16];
@@ -33,7 +33,7 @@ int logger_add(struct logger *logger, const char *tag, bool big,
 	size_t ll;
 	int ret;
 
-	if (!big && len > MAX_DATA_LEN)
+	if (!full && len > MAX_DATA_LEN)
 		len = MAX_DATA_LEN;
 
 	utoa(xTaskGetTickCount(), ticks, 10);
@@ -75,9 +75,9 @@ int logger_add(struct logger *logger, const char *tag, bool big,
 
 /******************************************************************************/
 #ifdef LOGGER
-int logger_add_str(struct logger *logger, const char *tag, bool big,
+int logger_add_str(struct logger *logger, const char *tag, bool full,
 		const char *buf)
 {
-	return logger_add(logger, tag, big, buf, strlen(buf));
+	return logger_add(logger, tag, full, buf, strlen(buf));
 }
 #endif

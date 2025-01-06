@@ -8,6 +8,8 @@
 #ifndef SIM800L_H_
 #define SIM800L_H_
 
+#include <stdbool.h>
+
 #include "stm32f1xx_hal.h"
 
 #include "cmsis_os.h"
@@ -89,7 +91,9 @@ struct sim800l_http
 	char *response;
 	size_t rlen;
 
-	char *auth;
+	char *req_auth;
+	char *res_auth;
+	bool res_auth_get;
 
 	void *context;
 };

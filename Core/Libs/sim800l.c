@@ -9,7 +9,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 
 #include "task.h"
 
@@ -309,6 +308,61 @@ static int parse_http_action(struct sim800l *mod, int* len, timeout_t timeout)
 	return -1;
 }
 
+// \r\n+HTTPHEAD: 224
+// \r\nhttp/1.1 200 ok
+// \r\nserver: nginx/1.18.0 (ubuntu)
+// \r\ndate: mon, 06 jan 2025 11:42:37 gmt
+// \r\ncontent-type: application/json
+// \r\ncontent-length: 32
+// \r\nconnection: keep-alive
+// \r\nauthorization: 93bsl2iertjhmgypran0jhssj3lxke66shih2qx4hqg=
+// \r\n\r\n\r\nOK\r\n
+// @retval: "Authorization" token length on success or -1 on failure
+static int parse_http_head_auth(struct sim800l *mod, timeout_t timeout)
+{
+	struct sim800l_http *data = mod->task.data;
+	const char *header = "authorization:";
+	const char *ending = "\r\n";
+	char *p, *end;
+	int len;
+
+	while (wait_for_any(mod, timeout))
+	{
+		mod->rxb[mod->rxlen] = '\0';
+
+		p = strstr((char *) mod->rxb, header);
+		if (!p)
+			continue;
+
+		end = strstr(p, ending);
+		if (!end)
+			continue;
+
+		p = strstr(p, " ");
+		if (!p)
+			return -1;
+
+		p++;
+		if (!*p)
+			return -1;
+
+		if (p >= end)
+			return -1;
+
+		len = end - p;
+		data->res_auth = pvPortMalloc(len + 1);
+		if (!data->res_auth)
+			return -1;
+
+		memcpy(data->res_auth, p, len);
+		data->res_auth[len] = '\0';
+
+		return len;
+	}
+
+	return -1;
+}
+
 // \r\n+HTTPREAD: 293\r\n...\r\nOK\r\n
 // @retval: Payload length on success or -1 on failure
 static int parse_http_read(struct sim800l *mod, timeout_t timeout)
@@ -438,10 +492,16 @@ inline static char *get_http_request(struct sim800l *mod)
 	return data->request;
 }
 
-inline static char *get_http_auth(struct sim800l *mod)
+inline static char *get_http_req_auth(struct sim800l *mod)
 {
 	struct sim800l_http *data = mod->task.data;
-	return data->auth;
+	return data->req_auth;
+}
+
+inline static bool get_http_res_auth_get(struct sim800l *mod)
+{
+	struct sim800l_http *data = mod->task.data;
+	return data->res_auth_get;
 }
 
 /******************************************************************************/
@@ -693,11 +753,11 @@ void sim800l_task(struct sim800l *mod)
 			// SSL does not work
 			// \r\nOK\r\n\r\n+HTTPACTION: 0,606,0\r\n
 
-			// "Authorization" header
-			if (get_http_auth(mod))
+			// Request "Authorization" header
+			if (get_http_req_auth(mod))
 			{
 				strcpy(cmd, "AT+HTTPPARA=USERDATA,Authorization: ");
-				strcat(cmd, get_http_auth(mod));
+				strcat(cmd, get_http_req_auth(mod));
 				transmit(mod, cmd);
 				if (!compare_buffer_beginning(mod, "\r\nOK\r\n", 2000))
 				{
@@ -744,6 +804,13 @@ void sim800l_task(struct sim800l *mod)
 			{
 				state(mod, STATE_GPRS_HTTP_TERM, STATUS_ERROR);
 				break;
+			}
+
+			// Response "Authorization" header
+			if (get_http_res_auth_get(mod))
+			{
+				transmit(mod, "AT+HTTPHEAD");
+				parse_http_head_auth(mod, 1000);
 			}
 
 			transmit(mod, "AT+HTTPREAD");
@@ -830,6 +897,7 @@ int sim800l_http(struct sim800l *mod, struct sim800l_http *data,
 	BaseType_t status;
 
 	data->response = NULL;
+	data->res_auth = NULL;
 
 	task.issue = ISSUE_HTTP;
 	task.timeout = pdMS_TO_TICKS(timeout);

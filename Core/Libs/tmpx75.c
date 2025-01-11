@@ -2,7 +2,7 @@
  * TMPx75 temperature sensor
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "tmpx75.h"
@@ -30,12 +30,12 @@
 
 inline static void power_off(struct tmpx75 *sen)
 {
-	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_SET);
 }
 
 inline static void power_on(struct tmpx75 *sen)
 {
-	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_RESET);
 }
 
 /******************************************************************************/

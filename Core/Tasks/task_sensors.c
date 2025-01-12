@@ -58,9 +58,10 @@ static void task(void *argument)
 	TickType_t wake = xTaskGetTickCount();
 
 	// Voltage
-	ret = avoltage_calib(sens->avlt);
-	if (!ret)
-		avail |= AVAIL_VOL;
+//	ret = avoltage_calib(sens->avlt);
+//	if (!ret)
+//		avail |= AVAIL_VOL;
+	avail |= AVAIL_VOL;
 
 	// Counter
 	avail |= AVAIL_CNT;

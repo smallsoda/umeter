@@ -229,6 +229,9 @@ int main(void)
   MX_ADC1_Init();
   /* USER CODE BEGIN 2 */
 
+  // Deinitialization
+  HAL_I2C_DeInit(&hi2c2);
+
   //
   params_init();
   params_get(&params);
@@ -250,8 +253,8 @@ int main(void)
   w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.secret, params.url_ota);
-  aht20_init(&aht, &hi2c2, GPIOB, GPIO_PIN_1 /* 0x70 */);
-  tmpx75_init(&tmp, &hi2c2, GPIOB, GPIO_PIN_1, 0x9E);
+  aht20_init(&aht, &hi2c2, MX_I2C2_Init, GPIOB, GPIO_PIN_1 /* 0x70 */);
+  tmpx75_init(&tmp, &hi2c2, MX_I2C2_Init, GPIOA, GPIO_PIN_6, 0x9E);
   counter_init(&cnt, GPIOA, GPIO_PIN_1);
   avoltage_init(&avlt, &hadc1, 2);
 
@@ -655,6 +658,9 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|SPI2_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
@@ -673,8 +679,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PA1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  /*Configure GPIO pins : PA1 PA6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

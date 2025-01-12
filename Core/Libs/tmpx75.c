@@ -30,20 +30,25 @@
 
 inline static void power_off(struct tmpx75 *sen)
 {
-	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_SET);
+	HAL_I2C_DeInit(sen->i2c);
+	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_RESET);
 }
 
 inline static void power_on(struct tmpx75 *sen)
 {
-	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_SET);
+	osDelay(50);
+	sen->hw_init();
 }
 
 /******************************************************************************/
 void tmpx75_init(struct tmpx75 *sen, I2C_HandleTypeDef *i2c,
-		GPIO_TypeDef *pwr_port, uint16_t pwr_pin, uint8_t address)
+		tmpx75_hw_init hw_init, GPIO_TypeDef *pwr_port, uint16_t pwr_pin,
+		uint8_t address)
 {
 	memset(sen, 0, sizeof(*sen));
 	sen->i2c = i2c;
+	sen->hw_init = hw_init;
 	sen->pwr_port = pwr_port;
 	sen->pwr_pin = pwr_pin;
 	sen->address = address;
@@ -59,7 +64,6 @@ int tmpx75_is_available(struct tmpx75 *sen)
 	uint16_t reg;
 
 	power_on(sen);
-	osDelay(10);
 
 	status = HAL_I2C_Mem_Read(sen->i2c, sen->address, I2C_REG_T_LOW,
 			I2C_MEMADD_SIZE_8BIT, buf, 2, I2C_TIMEOUT);
@@ -84,7 +88,6 @@ int tmpx75_read_temp(struct tmpx75 *sen, int32_t *value)
 	int16_t reg;
 
 	power_on(sen);
-	osDelay(50);
 
 	status = HAL_I2C_Mem_Read(sen->i2c, sen->address, I2C_REG_TEMP,
 			I2C_MEMADD_SIZE_8BIT, buf, 2, I2C_TIMEOUT);

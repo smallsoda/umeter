@@ -33,20 +33,24 @@ static const uint8_t cmd_meas[] = {0xAC, 0x33, 0x00};
 
 inline static void power_off(struct aht20 *sen)
 {
+	HAL_I2C_DeInit(sen->i2c);
 	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_SET);
 }
 
 inline static void power_on(struct aht20 *sen)
 {
 	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_RESET);
+	osDelay(100); // 40
+	sen->hw_init();
 }
 
 /******************************************************************************/
 void aht20_init(struct aht20 *sen, I2C_HandleTypeDef *i2c,
-		GPIO_TypeDef *pwr_port, uint16_t pwr_pin)
+		aht20_hw_init hw_init, GPIO_TypeDef *pwr_port, uint16_t pwr_pin)
 {
 	memset(sen, 0, sizeof(*sen));
 	sen->i2c = i2c;
+	sen->hw_init = hw_init;
 	sen->pwr_port = pwr_port;
 	sen->pwr_pin = pwr_pin;
 
@@ -60,7 +64,6 @@ int aht20_is_available(struct aht20 *sen)
 	uint8_t buf;
 
 	power_on(sen);
-	osDelay(40);
 
 	status = HAL_I2C_Mem_Read(sen->i2c, I2C_ADDRESS, I2C_CMD_STATUS,
 			I2C_MEMADD_SIZE_8BIT, &buf, 1, I2C_TIMEOUT);
@@ -100,7 +103,6 @@ int aht20_read(struct aht20 *sen, int32_t *temp, int32_t *hum)
 	uint8_t buf[7];
 
 	power_on(sen);
-	osDelay(40);
 
 	/* Status */
 	status = HAL_I2C_Mem_Read(sen->i2c, I2C_ADDRESS, I2C_CMD_STATUS,

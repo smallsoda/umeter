@@ -20,10 +20,10 @@ struct aht20
 	uint16_t pwr_pin;
 };
 
+
 void aht20_init(struct aht20 *sen, I2C_HandleTypeDef *i2c,
 		aht20_hw_init hw_init, GPIO_TypeDef *pwr_port, uint16_t pwr_pin);
 int aht20_is_available(struct aht20 *sen);
 int aht20_read(struct aht20 *sen, int32_t *temp, int32_t *hum);
-
 
 #endif /* AHT20_H_ */

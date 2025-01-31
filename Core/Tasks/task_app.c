@@ -138,6 +138,7 @@ static void task(void *argument)
 	char *sensor;
 	char *hmac;
 	char *url;
+	int distance;
 	int voltage;
 	int status;
 	int avail;
@@ -254,9 +255,10 @@ static void task(void *argument)
 //			xSemaphoreGive(app->sens->actual->mutex);
 //		}
 
-		// Voltage
+		// Voltage and distance
 		xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
 		voltage = app->sens->actual->voltage;
+		distance = app->sens->actual->distance;
 		xSemaphoreGive(app->sens->actual->mutex);
 
 		// -> /api/data
@@ -275,6 +277,8 @@ static void task(void *argument)
 		sensor_base64(app->sens->qhum, sensor); /* Humidity */
 		if (*sensor)
 			strjson_str(request, "hum", sensor);
+		if (distance)
+			strjson_int(request, "dist", distance);
 
 		strcpy(url, app->params->url_app);
 		strcat(url, "/api/data");

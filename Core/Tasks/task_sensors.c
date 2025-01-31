@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "hcsr04.h"
 #include "tmpx75.h"
 #include "aht20.h"
 
@@ -21,15 +22,17 @@ enum
 	AVAIL_VOL    = 0x01,
 	AVAIL_CNT    = 0x02,
 	AVAIL_TMPx75 = 0x04,
-	AVAIL_AHT20  = 0x08
+	AVAIL_AHT20  = 0x08,
+	AVAIL_DIST   = 0x10
 };
 
 enum
 {
-	DRDY_VOL = 0x01,
-	DRDY_CNT = 0x02,
-	DRDY_TMP = 0x04,
-	DRDY_HUM = 0x08
+	DRDY_VOL  = 0x01,
+	DRDY_CNT  = 0x02,
+	DRDY_TMP  = 0x04,
+	DRDY_HUM  = 0x08,
+	DRDY_DIST = 0x10
 };
 
 static osThreadId_t handle;
@@ -51,6 +54,7 @@ static void task(void *argument)
 	int32_t temperature = 0;
 	int32_t humidity = 0;
 	uint32_t count = 0;
+	int distance = 0;
 	int voltage = 0;
 
 	char *savail;
@@ -75,6 +79,9 @@ static void task(void *argument)
 	ret = aht20_is_available(sens->aht);
 	if (!ret)
 		avail |= AVAIL_AHT20;
+
+	// Distance
+	avail |= AVAIL_DIST;
 
 	// Available sensors
 	xSemaphoreTake(sens->actual->mutex, portMAX_DELAY);
@@ -134,6 +141,12 @@ static void task(void *argument)
 			if (!ret)
 				drdy |= DRDY_TMP | DRDY_HUM;
 		}
+		if (avail & AVAIL_DIST)
+		{
+			distance = hcsr04_read(sens->hcsr);
+			if (distance >= 0)
+				drdy |= DRDY_DIST;
+		}
 
 		// Save sensor readings
 		xSemaphoreTake(sens->actual->mutex, portMAX_DELAY);
@@ -145,6 +158,8 @@ static void task(void *argument)
 			sens->actual->temperature = temperature;
 		if (drdy & DRDY_HUM)
 			sens->actual->humidity = humidity;
+		if (drdy & DRDY_DIST)
+			sens->actual->distance = distance;
 		xSemaphoreGive(sens->actual->mutex);
 
 		// Add sensor readings to queues

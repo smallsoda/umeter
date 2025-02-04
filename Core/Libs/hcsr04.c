@@ -64,9 +64,15 @@ int hcsr04_read(struct hcsr04 *sen)
 	delay(sen->dwt, 10);
 	HAL_GPIO_WritePin(sen->trig_port, sen->trig_pin, GPIO_PIN_RESET);
 
+//	while(!HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15));
+//	sen->dwt->CYCCNT = 0;
+
+//	while(HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15));
+//	sen->count = sen->dwt->CYCCNT;
+
 	taskEXIT_CRITICAL();
 
-	status = xSemaphoreTake(sen->sema, pdMS_TO_TICKS(50));
+	status = xSemaphoreTake(sen->sema, pdMS_TO_TICKS(100));
 	if (!status)
 		return -1;
 

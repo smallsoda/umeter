@@ -148,6 +148,14 @@ static void task(void *argument)
 				drdy |= DRDY_DIST;
 		}
 
+//		char *dbgstr = pvPortMalloc(128);
+//		if (dbgstr)
+//		{
+//			itoa(distance, dbgstr, 10);
+//			logger_add_str(sens->logger, "DISTANCE", false, dbgstr);
+//			vPortFree(dbgstr);
+//		}
+
 		// Save sensor readings
 		xSemaphoreTake(sens->actual->mutex, portMAX_DELAY);
 		if (drdy & DRDY_VOL)
@@ -183,6 +191,7 @@ static void task(void *argument)
 		}
 
 		vTaskDelayUntil(&wake, pdMS_TO_TICKS(sens->params->period_sen * 1000));
+//		osDelay(1000);
 	}
 }
 

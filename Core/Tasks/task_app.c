@@ -33,6 +33,8 @@
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
 
+#define READ_TAMPER (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7))
+
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "app",
@@ -279,6 +281,7 @@ static void task(void *argument)
 			strjson_str(request, "hum", sensor);
 		if (distance)
 			strjson_int(request, "dist", distance);
+		strjson_int(request, "tamper", READ_TAMPER);
 
 		strcpy(url, app->params->url_app);
 		strcat(url, "/api/data");

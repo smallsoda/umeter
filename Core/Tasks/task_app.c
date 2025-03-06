@@ -33,7 +33,7 @@
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
 
-#define READ_TAMPER (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7))
+#define READ_TAMPER (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7)) // TODO
 
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
@@ -206,7 +206,7 @@ static void task(void *argument)
 
 	// -> /api/info
 	strjson_init(request);
-	strjson_str(request, "uid", app->params->mcu_uid); // ?
+	strjson_uint(request, "uid", app->params->id);
 	strjson_uint(request, "ts", *app->timestamp);
 	strjson_str(request, "name", PARAMS_DEVICE_NAME);
 	strjson_str(request, "bl_git", (char *) app->bl->hash);
@@ -265,7 +265,7 @@ static void task(void *argument)
 
 		// -> /api/data
 		strjson_init(request);
-		strjson_str(request, "uid", app->params->mcu_uid); // ?
+		strjson_uint(request, "uid", app->params->id);
 		strjson_uint(request, "ts", *app->timestamp);
 		strjson_uint(request, "ticks", xTaskGetTickCount());
 		if (voltage)

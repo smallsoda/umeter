@@ -33,6 +33,25 @@ static int jsoneq(const char *json, jsmntok_t *tok, const char *s)
 	return -1;
 }
 
+static int hextostr(const char *hexstr, size_t strlen, uint8_t *hexbuf,
+		size_t buflen)
+{
+	char tmpbuf[3];
+
+	if (strlen != buflen * 2)
+		return -1;
+
+	for (size_t i = 0; i < buflen; i++)
+	{
+		memcpy(tmpbuf, &hexstr[i * 2], 2);
+		tmpbuf[2] = '\0';
+
+		hexbuf[i] = strtoul(tmpbuf, NULL, 16);
+	}
+
+	return 0;
+}
+
 static int parse(struct appiface *appif, const char *request, char *response)
 {
 	jsmn_parser parser;
@@ -40,8 +59,8 @@ static int parse(struct appiface *appif, const char *request, char *response)
 	jsmntok_t *tcmd = NULL;
 	jsmntok_t *tparam = NULL;
 	jsmntok_t *tvalue = NULL;
+	size_t len, tmplen;
 	uint32_t tmp;
-	size_t len;
 	int ret;
 
 	memset(tokens, 0, sizeof(tokens));
@@ -79,7 +98,7 @@ static int parse(struct appiface *appif, const char *request, char *response)
 			return -1;
 
 		if (jsoneq(request, tparam, "uid") == 0)
-			strjson_str(response, "uid", appif->params->mcu_uid);
+			strjson_uint(response, "uid", appif->params->id);
 		else if (jsoneq(request, tparam, "ts") == 0)
 			strjson_uint(response, "ts", *appif->timestamp);
 		else if (jsoneq(request, tparam, "ticks") == 0)
@@ -109,6 +128,12 @@ static int parse(struct appiface *appif, const char *request, char *response)
 		else if (jsoneq(request, tparam, "mtime_count") == 0)
 			strjson_uint(response, "mtime_count",
 					appif->uparams.mtime_count);
+		else if (jsoneq(request, tparam, "sens") == 0)
+		{
+			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
+			strjson_int(response, "sens", appif->actual->avail);
+			xSemaphoreGive(appif->actual->mutex);
+		}
 		else if (jsoneq(request, tparam, "bat") == 0)
 		{
 			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
@@ -133,6 +158,14 @@ static int parse(struct appiface *appif, const char *request, char *response)
 			strjson_int(response, "hum", appif->actual->humidity);
 			xSemaphoreGive(appif->actual->mutex);
 		}
+		else if (jsoneq(request, tparam, "dist") == 0)
+		{
+			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
+			strjson_int(response, "dist", appif->actual->distance);
+			xSemaphoreGive(appif->actual->mutex);
+		}
+		else if (jsoneq(request, tparam, "tamper") == 0)
+			return -1; // TODO
 		else
 			return -1;
 	}
@@ -143,26 +176,34 @@ static int parse(struct appiface *appif, const char *request, char *response)
 
 		len = tvalue->end - tvalue->start;
 
-		if (jsoneq(request, tparam, "apn") == 0)
+		if (jsoneq(request, tparam, "uid") == 0)
 		{
-			strncpy(appif->uparams.apn, request + tvalue->start,
-					(sizeof(appif->uparams.apn) - 1) < len ?
-					(sizeof(appif->uparams.apn) - 1) : len);
-			appif->uparams.apn[len] = '\0';
+			tmp = strtoul(request + tvalue->start, NULL, 10);
+			if (tmp == 0)
+				return -1;
+
+			appif->uparams.id = tmp;
+		}
+		else if (jsoneq(request, tparam, "apn") == 0)
+		{
+			tmplen = (sizeof(appif->uparams.apn) - 1) < len ?
+					(sizeof(appif->uparams.apn) - 1) : len;
+			strncpy(appif->uparams.apn, request + tvalue->start, tmplen);
+			appif->uparams.apn[tmplen] = '\0';
 		}
 		else if (jsoneq(request, tparam, "url_ota") == 0)
 		{
-			strncpy(appif->uparams.url_ota, request + tvalue->start,
-					(sizeof(appif->uparams.url_ota) - 1) < len ?
-					(sizeof(appif->uparams.url_ota) - 1) : len);
-			appif->uparams.url_ota[len] = '\0';
+			tmplen = (sizeof(appif->uparams.url_ota) - 1) < len ?
+					(sizeof(appif->uparams.url_ota) - 1) : len;
+			strncpy(appif->uparams.url_ota, request + tvalue->start, tmplen);
+			appif->uparams.url_ota[tmplen] = '\0';
 		}
 		else if (jsoneq(request, tparam, "url_app") == 0)
 		{
-			strncpy(appif->uparams.url_app, request + tvalue->start,
-					(sizeof(appif->uparams.url_app) - 1) < len ?
-					(sizeof(appif->uparams.url_app) - 1) : len);
-			appif->uparams.url_app[len] = '\0';
+			tmplen = (sizeof(appif->uparams.url_app) - 1) < len ?
+					(sizeof(appif->uparams.url_app) - 1) : len;
+			strncpy(appif->uparams.url_app, request + tvalue->start, tmplen);
+			appif->uparams.url_app[tmplen] = '\0';
 		}
 		else if (jsoneq(request, tparam, "period_app") == 0)
 		{
@@ -193,6 +234,13 @@ static int parse(struct appiface *appif, const char *request, char *response)
 				return -1;
 
 			appif->uparams.mtime_count = tmp;
+		}
+		else if (jsoneq(request, tparam, "secret") == 0)
+		{
+			ret = hextostr(request + tvalue->start, len, appif->uparams.secret,
+					sizeof(appif->uparams.secret));
+			if (ret < 0)
+				return -1;
 		}
 		else
 		{

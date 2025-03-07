@@ -30,6 +30,8 @@
 #define SENSORS_BUF_LEN (SENSORS_QUEUE_LEN * sizeof(struct item))
 #define SENSORS_STR_LEN (4 * ((SENSORS_BUF_LEN + 2) / 3) + 1)
 
+#define MAX_QTY_FROM_QUEUE 4
+
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
 
@@ -108,12 +110,15 @@ static int parse_json_time(const char *response, uint32_t *ts)
 
 static void sensor_base64(QueueHandle_t queue, char *buf)
 {
-	struct item item[SENSORS_QUEUE_LEN];
+	struct item item[MAX_QTY_FROM_QUEUE];
 	size_t enclen;
 	int i = 0;
 
-	while (i < SENSORS_QUEUE_LEN && xQueueReceive(queue, &item[i], 0) == pdTRUE)
+	while (i < MAX_QTY_FROM_QUEUE &&
+			xQueueReceive(queue, &item[i], 0) == pdTRUE)
+	{
 		i++;
+	}
 
 	base64_encode((unsigned char *) item, sizeof(struct item) * i, buf,
 			&enclen);
@@ -304,6 +309,18 @@ static void task(void *argument)
 
 		if (httpd.response)
 			vPortFree(httpd.response);
+
+		// Are all queues empty?
+		if (uxQueueMessagesWaiting(app->ecnt->qec_avg))
+			continue; /* for */
+		if (uxQueueMessagesWaiting(app->ecnt->qec_min))
+			continue; /* for */
+		if (uxQueueMessagesWaiting(app->ecnt->qec_max))
+			continue; /* for */
+		if (uxQueueMessagesWaiting(app->sens->qtmp))
+			continue; /* for */
+		if (uxQueueMessagesWaiting(app->sens->qhum))
+			continue; /* for */
 
 		blink();
 		vTaskDelayUntil(&wake, pdMS_TO_TICKS(app->params->period_app * 1000));

@@ -23,7 +23,8 @@
 
 #define JSON_MAX_TOKENS 32
 
-#define FILE_PART_SIZE (1024 - 128)
+//#define FILE_PART_SIZE (1024 - 128) // TODO: Not enough RAM
+#define FILE_PART_SIZE 512
 #define FLASH_WRITE_SIZE 128 // Not 256 because of FILE_PART_SIZE value
 #define FLASH_READ_SIZE 32
 

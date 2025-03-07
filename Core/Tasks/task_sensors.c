@@ -1,5 +1,5 @@
 /*
- * Counter task
+ * Sensors task
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
  * 2024-2025
@@ -20,7 +20,7 @@
 enum
 {
 	AVAIL_VOL    = 0x01,
-	AVAIL_CNT    = 0x02,
+	AVAIL_CNT    = 0x02, // Not used
 	AVAIL_TMPx75 = 0x04,
 	AVAIL_AHT20  = 0x08,
 	AVAIL_DIST   = 0x10
@@ -29,7 +29,7 @@ enum
 enum
 {
 	DRDY_VOL  = 0x01,
-	DRDY_CNT  = 0x02,
+	DRDY_CNT  = 0x02, // Not used
 	DRDY_TMP  = 0x04,
 	DRDY_HUM  = 0x08,
 	DRDY_DIST = 0x10
@@ -53,7 +53,6 @@ static void task(void *argument)
 
 	int32_t temperature = 0;
 	int32_t humidity = 0;
-	uint32_t count = 0;
 	int distance = 0;
 	int voltage = 0;
 
@@ -66,9 +65,6 @@ static void task(void *argument)
 //	if (!ret)
 //		avail |= AVAIL_VOL;
 	avail |= AVAIL_VOL;
-
-	// Counter
-	avail |= AVAIL_CNT;
 
 	// TMPx75
 	ret = tmpx75_is_available(sens->tmp);
@@ -97,21 +93,8 @@ static void task(void *argument)
 		vPortFree(savail);
 	}
 
-	for(;;)
+	for (;;)
 	{
-		// Init value (for counter only)
-		if (avail & AVAIL_CNT)
-		{
-			counter_power_on(sens->cnt);
-			osDelay(1);
-
-			count = counter(sens->cnt);
-		}
-
-		// Measurement time delay (for counter only)
-		if (avail & AVAIL_CNT)
-			osDelay(sens->params->mtime_count * 1000);
-
 		// Update sensor readings
 		drdy = 0;
 
@@ -120,14 +103,6 @@ static void task(void *argument)
 			voltage = avoltage(sens->avlt);
 			if (voltage >= 0)
 				drdy |= DRDY_VOL;
-		}
-		if (avail & AVAIL_CNT)
-		{
-			count = counter(sens->cnt) - count;
-			drdy |= DRDY_CNT;
-
-			if (sens->params->period_sen != sens->params->mtime_count)
-				counter_power_off(sens->cnt);
 		}
 		if ((avail & AVAIL_TMPx75) && !(avail & AVAIL_AHT20))
 		{
@@ -148,20 +123,10 @@ static void task(void *argument)
 				drdy |= DRDY_DIST;
 		}
 
-//		char *dbgstr = pvPortMalloc(128);
-//		if (dbgstr)
-//		{
-//			itoa(distance, dbgstr, 10);
-//			logger_add_str(sens->logger, "DISTANCE", false, dbgstr);
-//			vPortFree(dbgstr);
-//		}
-
 		// Save sensor readings
 		xSemaphoreTake(sens->actual->mutex, portMAX_DELAY);
 		if (drdy & DRDY_VOL)
 			sens->actual->voltage = voltage;
-		if (drdy & DRDY_CNT)
-			sens->actual->count = count;
 		if (drdy & DRDY_TMP)
 			sens->actual->temperature = temperature;
 		if (drdy & DRDY_HUM)
@@ -171,12 +136,6 @@ static void task(void *argument)
 		xSemaphoreGive(sens->actual->mutex);
 
 		// Add sensor readings to queues
-		if (drdy & DRDY_CNT)
-		{
-			item.value = count;
-			item.timestamp = *sens->timestamp;
-			xQueueSendToBack(sens->qcnt, &item, 0);
-		}
 		if (drdy & DRDY_TMP)
 		{
 			item.value = temperature;
@@ -191,7 +150,6 @@ static void task(void *argument)
 		}
 
 		vTaskDelayUntil(&wake, pdMS_TO_TICKS(sens->params->period_sen * 1000));
-//		osDelay(1000);
 	}
 }
 

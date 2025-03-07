@@ -2,7 +2,7 @@
  * System information task
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "ptasks.h"
@@ -62,7 +62,7 @@ static void info(struct app *app)
 static void task(void *argument)
 {
 	const char *t_names[] = {"system", "def", "app", "siface", "info", "ota",
-			"sim800l", "sensors", NULL};
+			"sim800l", "sensors", "ecounter", NULL};
 	TaskHandle_t t_handle;
 	TaskStatus_t details;
 	char temp[16];

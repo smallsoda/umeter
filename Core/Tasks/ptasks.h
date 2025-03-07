@@ -18,7 +18,7 @@
 #include "params.h"
 #include "ota.h"
 
-#define SENSORS_QUEUE_LEN 16 // ?
+#define SENSORS_QUEUE_LEN 12 // ?
 
 struct item
 {
@@ -41,13 +41,11 @@ struct actual
 
 struct sensors
 {
-	QueueHandle_t qcnt;
 	QueueHandle_t qtmp;
 	QueueHandle_t qhum;
 
 	struct avoltage *avlt;
 	struct hcsr04 *hcsr;
-	struct counter *cnt;
 	struct tmpx75 *tmp;
 	struct aht20 *aht;
 	volatile uint32_t *timestamp;
@@ -57,10 +55,24 @@ struct sensors
 	struct actual *actual;
 };
 
+struct ecounter
+{
+	QueueHandle_t qec_avg;
+	QueueHandle_t qec_max;
+	QueueHandle_t qec_min;
+
+	struct counter *cnt;
+	volatile uint32_t *timestamp;
+	params_t *params;
+
+	struct actual *actual;
+};
+
 struct app
 {
 	struct sim800l *mod;
 	struct sensors *sens;
+	struct ecounter *ecnt;
 	struct logger *logger;
 
 	volatile uint32_t *timestamp;
@@ -76,5 +88,6 @@ void task_app(struct app *app);
 void task_info(struct app *app);
 void task_system(IWDG_HandleTypeDef *wdg);
 void task_sensors(struct sensors *sens);
+void task_ecounter(struct ecounter *ecnt);
 
 #endif /* UMETER_TASKS_H_ */

@@ -270,9 +270,15 @@ static void task(void *argument)
 		strjson_uint(request, "ticks", xTaskGetTickCount());
 		if (voltage)
 			strjson_int(request, "bat", voltage);
-		sensor_base64(app->sens->qcnt, sensor); /* Counter */
+		sensor_base64(app->ecnt->qec_avg, sensor); /* Counter [avg] */
 		if (*sensor)
 			strjson_str(request, "count", sensor);
+		sensor_base64(app->ecnt->qec_min, sensor); /* Counter [min] */
+		if (*sensor)
+			strjson_str(request, "count_min", sensor);
+		sensor_base64(app->ecnt->qec_max, sensor); /* Counter [max] */
+		if (*sensor)
+			strjson_str(request, "count_max", sensor);
 		sensor_base64(app->sens->qtmp, sensor); /* Temperature */
 		if (*sensor)
 			strjson_str(request, "temp", sensor);

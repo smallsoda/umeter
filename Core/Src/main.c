@@ -114,6 +114,7 @@ struct appiface appif;
 
 struct actual actual;
 struct sensors sens;
+struct ecounter ecnt;
 struct app app;
 
 extern const uint32_t *_app;
@@ -278,12 +279,10 @@ int main(void)
 
   // sens
   memset(&sens, 0, sizeof(sens));
-  sens.qcnt = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.qtmp = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.qhum = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.avlt = &avlt;
   sens.hcsr = &hcsr;
-  sens.cnt = &cnt;
   sens.tmp = &tmp;
   sens.aht = &aht;
   sens.timestamp = &timestamp;
@@ -291,12 +290,23 @@ int main(void)
   sens.logger = &logger;
   sens.actual = &actual;
 
+  // ecnt
+  memset(&ecnt, 0, sizeof(ecnt));
+  ecnt.qec_avg = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
+  ecnt.qec_max = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
+  ecnt.qec_min = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
+  ecnt.cnt = &cnt;
+  ecnt.timestamp = &timestamp;
+  ecnt.params = &params;
+  ecnt.actual = &actual;
+
   // app
   memset(&app, 0, sizeof(app));
   app.timestamp = &timestamp;
   app.params = &params;
   app.logger = &logger;
   app.sens = &sens;
+  app.ecnt = &ecnt;
   app.mod = &mod;
   app.bl = &bl;
 
@@ -338,6 +348,7 @@ int main(void)
   task_system(&hiwdg);
   task_siface(&siface);
   task_sensors(&sens);
+  task_ecounter(&ecnt);
   task_sim800l(&mod);
   task_ota(&ota);
   task_app(&app);

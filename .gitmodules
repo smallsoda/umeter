@@ -4,6 +4,3 @@
 [submodule "jsmn"]
 	path = jsmn
 	url = https://github.com/zserge/jsmn.git
-[submodule "mfifo"]
-	path = mfifo
-	url = https://github.com/smallsoda/mfifo.git

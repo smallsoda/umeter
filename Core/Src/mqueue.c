@@ -17,45 +17,37 @@
 extern const uint32_t *_app_len;
 #define APP_LENGTH ((uint32_t) &_app_len)
 
-#define APP_END_ADDR     (FWS_PAYLOAD_ADDR + APP_LENGTH)
+#define APP_END_ADDR (FWS_PAYLOAD_ADDR + APP_LENGTH)
 #define APP_END_SEC_ADDR ((APP_END_ADDR / W25Q_SECTOR_SIZE) * W25Q_SECTOR_SIZE)
-//#define FIFO_ADDR        (APP_END_SEC + ((APP_LENGTH % W25Q_SECTOR_SIZE) && 1)) // TODO
+#define FIFO_ADDR (APP_END_SEC_ADDR + \
+		((APP_LENGTH % W25Q_SECTOR_SIZE) ? W25Q_SECTOR_SIZE : 0))
 
-
-static SemaphoreHandle_t mutex = NULL;
-static struct w25q_s *memory = NULL;
-static size_t address = 0;
-static size_t msize = 0;
-
-
-static int read(uint32_t addr, uint8_t *data, size_t len)
+static struct
 {
-	w25q_s_read_data(memory, addr, data, len);
-	return 0;
-}
+	SemaphoreHandle_t mutex;
+	struct w25q_s *mem;
+	size_t address;
+	size_t msize;
+} mqueue;
 
-static int write(uint32_t addr, const uint8_t *data, size_t len)
-{
-	w25q_s_write_data(memory, addr, (uint8_t *) data, len);
-	return 0;
-}
-
-static int erase(uint32_t addr)
-{
-	w25q_s_sector_erase(memory, addr);
-	return 0;
-}
 
 /******************************************************************************/
-void mqueue_init(struct w25q_s *mem)
+int mqueue_init(struct w25q_s *mem)
 {
-	memory = mem;
-	mutex = xSemaphoreCreateMutex();
-	msize = w25q_s_get_capacity(memory);
+	memset(&mqueue, 0, sizeof(mqueue));
+	mqueue.mem = mem;
+	mqueue.mutex = xSemaphoreCreateMutex();
 
-	address = APP_END_SEC_ADDR;
-	if (APP_LENGTH % W25Q_SECTOR_SIZE)
-		address += W25Q_SECTOR_SIZE;
+	if (w25q_s_get_manufacturer_id(mqueue.mem) != FWS_WINBOND_MANUFACTURER_ID)
+	{
+		mqueue.msize = 0;
+		return -1;
+	}
+
+	mqueue.address = FIFO_ADDR;
+	mqueue.msize = w25q_s_get_capacity(mqueue.mem);
+
+	return 0;
 }
 
 inline static mqueue_t *create(size_t secnum)
@@ -64,21 +56,22 @@ inline static mqueue_t *create(size_t secnum)
 	mqueue_t *q;
 	int ret;
 
-	if ((address + len) > msize)
+	if ((mqueue.address + len) > mqueue.msize)
 		return NULL;
 
 	q = pvPortMalloc(sizeof(mqueue_t));
 	if (!q)
 		return NULL;
 
-	ret = mfifo_init(&q->mfifo, address, secnum, read, write, erase);
+	ret = mfifo_init(&q->mfifo, mqueue.mem, W25Q_SECTOR_SIZE,
+			sizeof(struct item), mqueue.address, secnum);
 	if (ret)
 	{
 		vPortFree(q);
 		return NULL;
 	}
 
-	address += len;
+	mqueue.address += len;
 	return q;
 }
 
@@ -87,9 +80,9 @@ mqueue_t *mqueue_create(size_t secnum)
 {
 	mqueue_t *q;
 
-	xSemaphoreTake(mutex, portMAX_DELAY);
+	xSemaphoreTake(mqueue.mutex, portMAX_DELAY);
 	q = create(secnum);
-	xSemaphoreGive(mutex);
+	xSemaphoreGive(mqueue.mutex);
 
 	return q;
 }

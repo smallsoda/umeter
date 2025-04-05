@@ -10,8 +10,6 @@
 
 #include "w25q_s.h"
 
-#define MFIFO_SECTOR_SIZE  W25Q_SECTOR_SIZE
-#define MFIFO_ELEMENT_SIZE sizeof(struct item)
 #include "mfifo.h"
 
 struct item
@@ -26,7 +24,7 @@ typedef struct
 } mqueue_t;
 
 
-void mqueue_init(struct w25q_s *mem);
+int mqueue_init(struct w25q_s *mem);
 mqueue_t *mqueue_create(size_t secnum);
 int mqueue_set(mqueue_t *queue, const void *element);
 int mqueue_get(mqueue_t *queue, void *element);

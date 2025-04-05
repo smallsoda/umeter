@@ -38,7 +38,7 @@ enum
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "sensors",
-  .stack_size = 96 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
 

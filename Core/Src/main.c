@@ -31,8 +31,6 @@
 #include "avoltage.h"
 #include "sim800l.h"
 #include "ptasks.h"
-#include "hcsr04.h"
-#include "tmpx75.h"
 #include "siface.h"
 #include "logger.h"
 #include "params.h"
@@ -106,8 +104,6 @@ struct w25q mem;
 struct sim800l mod;
 struct ota ota;
 struct aht20 aht;
-struct tmpx75 tmp;
-struct hcsr04 hcsr;
 struct counter cnt;
 struct avoltage avlt;
 struct appiface appif;
@@ -190,10 +186,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	{
 		counter_irq(&cnt);
 	}
-	else if (GPIO_Pin == GPIO_PIN_15)
-	{
-		hcsr04_irq(&hcsr);
-	}
 }
 
 void hz_callback(TimerHandle_t timer)
@@ -271,9 +263,7 @@ int main(void)
   w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.secret, params.url_ota);
-  hcsr04_init(&hcsr, DWT, GPIOA, GPIO_PIN_12);
   aht20_init(&aht, &hi2c2, MX_I2C2_Init, GPIOB, GPIO_PIN_1 /* 0x70 */);
-  tmpx75_init(&tmp, &hi2c2, MX_I2C2_Init, GPIOA, GPIO_PIN_6, 0x9E);
   counter_init(&cnt, GPIOA, GPIO_PIN_1);
   avoltage_init(&avlt, &hadc1, 2);
 
@@ -282,8 +272,6 @@ int main(void)
   sens.qtmp = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.qhum = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
   sens.avlt = &avlt;
-  sens.hcsr = &hcsr;
-  sens.tmp = &tmp;
   sens.aht = &aht;
   sens.timestamp = &timestamp;
   sens.params = &params;
@@ -688,9 +676,6 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6|GPIO_PIN_12, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|SPI2_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
@@ -709,17 +694,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PA1 PA6 PA12 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|GPIO_PIN_6|GPIO_PIN_12;
+  /*Configure GPIO pin : PA1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_7;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB1 SPI2_CS_Pin RST_Pin */
@@ -731,16 +710,13 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin : PA15 */
   GPIO_InitStruct.Pin = GPIO_PIN_15;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
-
-  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 5, 0);
-  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */

@@ -10,20 +10,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "hcsr04.h"
-#include "tmpx75.h"
 #include "aht20.h"
 
 #include "logger.h"
 #define TAG "SENSORS"
 
+//#define AVOLTAGE_CALIB
+
 enum
 {
 	AVAIL_VOL    = 0x01,
 	AVAIL_CNT    = 0x02, // Not used
-	AVAIL_TMPx75 = 0x04,
+	AVAIL_TMPx75 = 0x04, // Not used
 	AVAIL_AHT20  = 0x08,
-	AVAIL_DIST   = 0x10
+	AVAIL_DIST   = 0x10  // Not used
 };
 
 enum
@@ -32,7 +32,7 @@ enum
 	DRDY_CNT  = 0x02, // Not used
 	DRDY_TMP  = 0x04,
 	DRDY_HUM  = 0x08,
-	DRDY_DIST = 0x10
+	DRDY_DIST = 0x10  // Not used
 };
 
 static osThreadId_t handle;
@@ -53,7 +53,6 @@ static void task(void *argument)
 
 	int32_t temperature = 0;
 	int32_t humidity = 0;
-	int distance = 0;
 	int voltage = 0;
 
 	char *savail;
@@ -61,23 +60,17 @@ static void task(void *argument)
 	TickType_t wake = xTaskGetTickCount();
 
 	// Voltage
-//	ret = avoltage_calib(sens->avlt);
-//	if (!ret)
-//		avail |= AVAIL_VOL;
-	avail |= AVAIL_VOL;
-
-	// TMPx75
-	ret = tmpx75_is_available(sens->tmp);
+#ifdef AVOLTAGE_CALIB
+	ret = avoltage_calib(sens->avlt);
 	if (!ret)
-		avail |= AVAIL_TMPx75;
+		avail |= AVAIL_VOL;
+#endif /* AVOLTAGE_CALIB */
+	avail |= AVAIL_VOL;
 
 	// AHT20
 	ret = aht20_is_available(sens->aht);
 	if (!ret)
 		avail |= AVAIL_AHT20;
-
-	// Distance
-	avail |= AVAIL_DIST;
 
 	// Available sensors
 	xSemaphoreTake(sens->actual->mutex, portMAX_DELAY);
@@ -104,23 +97,11 @@ static void task(void *argument)
 			if (voltage >= 0)
 				drdy |= DRDY_VOL;
 		}
-		if ((avail & AVAIL_TMPx75) && !(avail & AVAIL_AHT20))
-		{
-			ret = tmpx75_read_temp(sens->tmp, &temperature);
-			if (!ret)
-				drdy |= DRDY_TMP;
-		}
 		if (avail & AVAIL_AHT20)
 		{
 			ret = aht20_read(sens->aht, &temperature, &humidity);
 			if (!ret)
 				drdy |= DRDY_TMP | DRDY_HUM;
-		}
-		if (avail & AVAIL_DIST)
-		{
-			distance = hcsr04_read(sens->hcsr);
-			if (distance >= 0)
-				drdy |= DRDY_DIST;
 		}
 
 		// Save sensor readings
@@ -131,8 +112,6 @@ static void task(void *argument)
 			sens->actual->temperature = temperature;
 		if (drdy & DRDY_HUM)
 			sens->actual->humidity = humidity;
-		if (drdy & DRDY_DIST)
-			sens->actual->distance = distance;
 		xSemaphoreGive(sens->actual->mutex);
 
 		// Add sensor readings to queues

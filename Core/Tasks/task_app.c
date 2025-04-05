@@ -16,7 +16,6 @@
 
 #include "strjson.h"
 #include "base64.h"
-#include "tmpx75.h"
 #include "params.h"
 #include "main.h"
 #include "hmac.h"
@@ -35,7 +34,7 @@
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
 
-#define READ_TAMPER (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_7)) // TODO
+#define READ_TAMPER (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15)) // TODO
 
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
@@ -145,7 +144,6 @@ static void task(void *argument)
 	char *sensor;
 	char *hmac;
 	char *url;
-	int distance;
 	int voltage;
 	int status;
 	int avail;
@@ -265,7 +263,6 @@ static void task(void *argument)
 		// Voltage and distance
 		xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
 		voltage = app->sens->actual->voltage;
-		distance = app->sens->actual->distance;
 		xSemaphoreGive(app->sens->actual->mutex);
 
 		// -> /api/data
@@ -290,8 +287,6 @@ static void task(void *argument)
 		sensor_base64(app->sens->qhum, sensor); /* Humidity */
 		if (*sensor)
 			strjson_str(request, "hum", sensor);
-		if (distance)
-			strjson_int(request, "dist", distance);
 		strjson_int(request, "tamper", READ_TAMPER);
 
 		strcpy(url, app->params->url_app);

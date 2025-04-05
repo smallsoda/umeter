@@ -33,7 +33,6 @@ struct actual
 	int avail;
 
 	int voltage;
-	int distance;
 	uint32_t count;
 	int32_t humidity;
 	int32_t temperature;
@@ -45,8 +44,6 @@ struct sensors
 	QueueHandle_t qhum;
 
 	struct avoltage *avlt;
-	struct hcsr04 *hcsr;
-	struct tmpx75 *tmp;
 	struct aht20 *aht;
 	volatile uint32_t *timestamp;
 	params_t *params;

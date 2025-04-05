@@ -158,12 +158,6 @@ static int parse(struct appiface *appif, const char *request, char *response)
 			strjson_int(response, "hum", appif->actual->humidity);
 			xSemaphoreGive(appif->actual->mutex);
 		}
-		else if (jsoneq(request, tparam, "dist") == 0)
-		{
-			xSemaphoreTake(appif->actual->mutex, portMAX_DELAY);
-			strjson_int(response, "dist", appif->actual->distance);
-			xSemaphoreGive(appif->actual->mutex);
-		}
 		else if (jsoneq(request, tparam, "tamper") == 0)
 			return -1; // TODO
 		else

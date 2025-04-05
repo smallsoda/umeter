@@ -12,7 +12,7 @@
 
 
 /******************************************************************************/
-void updater_init(struct updater *upd, struct w25q *mem,
+void updater_init(struct updater *upd, struct w25q_s *mem,
 		UART_HandleTypeDef *uart)
 {
 	memset(upd, 0, sizeof(*upd));
@@ -99,10 +99,10 @@ void updater_task(struct updater *upd)
 
 		if ((address & (W25Q_SECTOR_SIZE - 1)) == 0)
 		{
-			w25q_sector_erase(upd->mem, address);
+			w25q_s_sector_erase(upd->mem, address);
 		}
 
-		w25q_write_data(upd->mem, address, (uint8_t *) packet.payload,
+		w25q_s_write_data(upd->mem, address, (uint8_t *) packet.payload,
 				UPDATER_PAYLOAD_SIZE * sizeof(uint32_t));
 
 		transmit(upd, address);

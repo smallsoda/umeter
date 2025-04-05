@@ -13,7 +13,7 @@
 
 #include "sim800l.h"
 #include "hmac.h"
-#include "w25q.h"
+#include "w25q_s.h"
 
 #define OTA_URL_SIZE 64
 
@@ -22,12 +22,12 @@ struct ota
 	uint8_t secret[HMAC_SECRET_SIZE];
 	char url[OTA_URL_SIZE];
 	struct sim800l *mod;
-	struct w25q *mem;
+	struct w25q_s *mem;
 
 	TaskHandle_t task;
 };
 
-void ota_init(struct ota *ota, struct sim800l *mod, struct w25q *mem,
+void ota_init(struct ota *ota, struct sim800l *mod, struct w25q_s *mem,
 		const uint8_t *secret, const char *url);
 void ota_task(struct ota *ota);
 

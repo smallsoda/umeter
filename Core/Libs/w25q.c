@@ -5,7 +5,7 @@
  * 2024-2025
  */
 
-#include "w25q.h"
+#include "w25q_s.h"
 
 #include <string.h>
 #include <stdlib.h>

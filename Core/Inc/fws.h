@@ -11,7 +11,7 @@
 #include <stdint.h>
 
 #include "stm32f1xx_hal.h"
-#include "w25q.h"
+#include "w25q_s.h"
 
 #define FWS_HEADER_ADDR  0x00
 #define FWS_HEADER_SIZE  W25Q_SECTOR_SIZE

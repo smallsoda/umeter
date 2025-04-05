@@ -36,8 +36,8 @@
 #include "params.h"
 #include "atomic.h"
 #include "mqueue.h"
+#include "w25q_s.h"
 #include "aht20.h"
-#include "w25q.h"
 #include "ota.h"
 #include "fws.h"
 
@@ -101,7 +101,7 @@ uint8_t ub_sif[UART_BUFFER_SIZE];
 params_t params;
 struct siface siface;
 struct logger logger;
-struct w25q mem;
+struct w25q_s mem;
 struct sim800l mod;
 struct ota ota;
 struct aht20 aht;
@@ -261,7 +261,7 @@ int main(void)
   //
   siface_init(&siface, &huart1, 32, appiface, &appif);
   logger_init(&logger, &siface);
-  w25q_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
+  w25q_s_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.secret, params.url_ota);
   aht20_init(&aht, &hi2c2, MX_I2C2_Init, GPIOB, GPIO_PIN_1 /* 0x70 */);

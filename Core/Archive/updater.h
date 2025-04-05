@@ -13,7 +13,7 @@
 #include "cmsis_os.h"
 #include "stream_buffer.h"
 
-#include "w25q.h"
+#include "w25q_s.h"
 
 #define UPDATER_PAYLOAD_SIZE 16
 
@@ -21,7 +21,7 @@ struct updater
 {
 	UART_HandleTypeDef *uart;
 	StreamBufferHandle_t stream;
-	struct w25q *mem;
+	struct w25q_s *mem;
 };
 
 enum updater_cmd
@@ -39,7 +39,7 @@ struct updater_packet
 };
 
 
-void updater_init(struct updater *upd, struct w25q *mem,
+void updater_init(struct updater *upd, struct w25q_s *mem,
 		UART_HandleTypeDef *uart);
 void updater_irq(struct updater *upd, const char *buf, size_t len);
 void updater_task(struct updater *upd);

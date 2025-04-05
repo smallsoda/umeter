@@ -35,7 +35,7 @@ extern const uint32_t *_app_len;
 
 
 /******************************************************************************/
-void ota_init(struct ota *ota, struct sim800l *mod, struct w25q *mem,
+void ota_init(struct ota *ota, struct sim800l *mod, struct w25q_s *mem,
 		const uint8_t *secret, const char *url)
 {
 	memset(ota, 0, sizeof(*ota));
@@ -181,11 +181,11 @@ static int request_file(struct ota *ota, struct sim800l_http *http,
 	return sim800l_http(ota->mod, http, callback, DELAY_HTTP_MS);
 }
 
-static void mem_erase(struct w25q *mem, uint32_t addr, uint16_t size)
+static void mem_erase(struct w25q_s *mem, uint32_t addr, uint16_t size)
 {
 	while (size)
 	{
-		w25q_sector_erase(mem, addr);
+		w25q_s_sector_erase(mem, addr);
 
 		if (size > W25Q_SECTOR_SIZE)
 			size -= W25Q_SECTOR_SIZE;
@@ -195,7 +195,7 @@ static void mem_erase(struct w25q *mem, uint32_t addr, uint16_t size)
 	}
 }
 
-static void mem_write(struct w25q *mem, uint32_t addr, uint8_t *buf,
+static void mem_write(struct w25q_s *mem, uint32_t addr, uint8_t *buf,
 		uint16_t size)
 {
 	uint16_t ws;
@@ -207,7 +207,7 @@ static void mem_write(struct w25q *mem, uint32_t addr, uint8_t *buf,
 		else
 			ws = size;
 
-		w25q_write_data(mem, addr, buf, ws);
+		w25q_s_write_data(mem, addr, buf, ws);
 
 		size -= ws;
 		addr += ws;
@@ -215,13 +215,13 @@ static void mem_write(struct w25q *mem, uint32_t addr, uint8_t *buf,
 	}
 }
 
-static void mem_write_header(struct w25q *mem, struct fws *fws)
+static void mem_write_header(struct w25q_s *mem, struct fws *fws)
 {
-	w25q_sector_erase(mem, FWS_HEADER_ADDR);
+	w25q_s_sector_erase(mem, FWS_HEADER_ADDR);
 	mem_write(mem, FWS_HEADER_ADDR, (uint8_t *) fws, sizeof(struct fws));
 }
 
-static uint32_t mem_checksum(struct w25q *mem, uint32_t addr, uint32_t size)
+static uint32_t mem_checksum(struct w25q_s *mem, uint32_t addr, uint32_t size)
 {
 	uint32_t checksum = FWS_CHECKSUM_INIT;
 	uint8_t buf[FLASH_READ_SIZE];
@@ -234,7 +234,7 @@ static uint32_t mem_checksum(struct w25q *mem, uint32_t addr, uint32_t size)
 		else
 			ws = size;
 
-		w25q_read_data(mem, addr, buf, ws);
+		w25q_s_read_data(mem, addr, buf, ws);
 
 		size -= ws;
 		addr += ws;
@@ -266,7 +266,7 @@ void ota_task(struct ota *ota)
 	char *hmac;
 	int ret;
 
-	if (w25q_get_manufacturer_id(ota->mem) != FWS_WINBOND_MANUFACTURER_ID)
+	if (w25q_s_get_manufacturer_id(ota->mem) != FWS_WINBOND_MANUFACTURER_ID)
 	{
 		vTaskDelete(NULL);
 		return; // Never be here

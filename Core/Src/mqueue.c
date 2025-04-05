@@ -19,39 +19,39 @@ extern const uint32_t *_app_len;
 
 #define APP_END_ADDR     (FWS_PAYLOAD_ADDR + APP_LENGTH)
 #define APP_END_SEC_ADDR ((APP_END_ADDR / W25Q_SECTOR_SIZE) * W25Q_SECTOR_SIZE)
-//#define FIFO_ADDR        (APP_END_SEC + ((APP_LENGTH % W25Q_SECTOR_SIZE) && 1))
+//#define FIFO_ADDR        (APP_END_SEC + ((APP_LENGTH % W25Q_SECTOR_SIZE) && 1)) // TODO
 
 
 static SemaphoreHandle_t mutex = NULL;
-static struct w25q *memory = NULL;
+static struct w25q_s *memory = NULL;
 static size_t address = 0;
 static size_t msize = 0;
 
 
 static int read(uint32_t addr, uint8_t *data, size_t len)
 {
-	w25q_read_data(memory, addr, data, len);
+	w25q_s_read_data(memory, addr, data, len);
 	return 0;
 }
 
 static int write(uint32_t addr, const uint8_t *data, size_t len)
 {
-	w25q_write_data(memory, addr, (uint8_t *) data, len);
+	w25q_s_write_data(memory, addr, (uint8_t *) data, len);
 	return 0;
 }
 
 static int erase(uint32_t addr)
 {
-	w25q_sector_erase(memory, addr);
+	w25q_s_sector_erase(memory, addr);
 	return 0;
 }
 
 /******************************************************************************/
-void mqueue_init(struct w25q *mem)
+void mqueue_init(struct w25q_s *mem)
 {
 	memory = mem;
 	mutex = xSemaphoreCreateMutex();
-	msize = w25q_get_capacity(memory);
+	msize = w25q_s_get_capacity(memory);
 
 	address = APP_END_SEC_ADDR;
 	if (APP_LENGTH % W25Q_SECTOR_SIZE)

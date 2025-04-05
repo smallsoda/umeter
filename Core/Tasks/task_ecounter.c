@@ -68,7 +68,7 @@ static void task(void *argument)
 			// max
 			item.value = max;
 			item.timestamp = *ecnt->timestamp;
-			xQueueSendToBack(ecnt->qec_max, &item, 0);
+			mqueue_set(ecnt->qec_max, &item);
 
 			// min
 			if (min != COUNT_MIN_INIT)
@@ -76,7 +76,7 @@ static void task(void *argument)
 			else
 				item.value = 0;
 			item.timestamp = *ecnt->timestamp;
-			xQueueSendToBack(ecnt->qec_min, &item, 0);
+			mqueue_set(ecnt->qec_min, &item);
 
 			// avg
 			if (sumcnt)
@@ -84,7 +84,7 @@ static void task(void *argument)
 			else
 				item.value = 0;
 			item.timestamp = *ecnt->timestamp;
-			xQueueSendToBack(ecnt->qec_avg, &item, 0);
+			mqueue_set(ecnt->qec_avg, &item);
 
 			min = COUNT_MIN_INIT;
 			max = 0;

@@ -1,0 +1,35 @@
+/*
+ * "mfifo" based FLASH storage queue
+ *
+ * Dmitry Proshutinsky <dproshutinsky@gmail.com>
+ * 2025
+ */
+
+#ifndef MQUEUE_H_
+#define MQUEUE_H_
+
+#include "w25q.h"
+
+#define MFIFO_SECTOR_SIZE  W25Q_SECTOR_SIZE
+#define MFIFO_ELEMENT_SIZE sizeof(struct item)
+#include "mfifo.h"
+
+struct item
+{
+	uint32_t value;
+	uint32_t timestamp;
+};
+
+typedef struct
+{
+	struct mfifo mfifo;
+} mqueue_t;
+
+
+void mqueue_init(struct w25q *mem);
+mqueue_t *mqueue_create(size_t secnum);
+int mqueue_set(mqueue_t *queue, const void *element);
+int mqueue_get(mqueue_t *queue, void *element);
+int mqueue_is_empty(mqueue_t *queue);
+
+#endif /* MQUEUE_H_ */

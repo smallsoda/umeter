@@ -2,7 +2,7 @@
  * W25Q Serial FLASH memory
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #ifndef W25Q_H_
@@ -29,7 +29,6 @@ void w25q_hw_deinit(struct w25q *mem);
 void w25q_sector_erase(struct w25q *mem, uint32_t address);
 void w25q_block_erase(struct w25q *mem, uint32_t address);
 void w25q_chip_erase(struct w25q *mem);
-void w25q_write_enable(struct w25q *mem);
 void w25q_read_data(struct w25q *mem, uint32_t address, uint8_t *data,
 		uint16_t size);
 void w25q_write_data(struct w25q *mem, uint32_t address, uint8_t *data,

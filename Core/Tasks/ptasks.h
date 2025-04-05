@@ -16,15 +16,10 @@
 #include "sim800l.h"
 #include "siface.h"
 #include "params.h"
+#include "mqueue.h"
 #include "ota.h"
 
-#define SENSORS_QUEUE_LEN 12 // ?
-
-struct item
-{
-	uint32_t value;
-	uint32_t timestamp;
-};
+#define SENSORS_QUEUE_SECNUM 2
 
 struct actual
 {
@@ -40,8 +35,8 @@ struct actual
 
 struct sensors
 {
-	QueueHandle_t qtmp;
-	QueueHandle_t qhum;
+	mqueue_t *qtmp;
+	mqueue_t *qhum;
 
 	struct avoltage *avlt;
 	struct aht20 *aht;
@@ -54,9 +49,9 @@ struct sensors
 
 struct ecounter
 {
-	QueueHandle_t qec_avg;
-	QueueHandle_t qec_max;
-	QueueHandle_t qec_min;
+	mqueue_t *qec_avg;
+	mqueue_t *qec_max;
+	mqueue_t *qec_min;
 
 	struct counter *cnt;
 	volatile uint32_t *timestamp;

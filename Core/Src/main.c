@@ -35,6 +35,7 @@
 #include "logger.h"
 #include "params.h"
 #include "atomic.h"
+#include "mqueue.h"
 #include "aht20.h"
 #include "w25q.h"
 #include "ota.h"
@@ -137,11 +138,11 @@ void task_default(void *argument);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-void DWT_cnt_init(void)
-{
-	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-}
+//void DWT_cnt_init(void)
+//{
+//	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+//	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+//}
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
@@ -240,7 +241,7 @@ int main(void)
   HAL_I2C_DeInit(&hi2c2);
 
   //
-  DWT_cnt_init();
+//  DWT_cnt_init();
 
   //
   params_init();
@@ -267,10 +268,13 @@ int main(void)
   counter_init(&cnt, GPIOA, GPIO_PIN_1);
   avoltage_init(&avlt, &hadc1, 2);
 
+  //
+  mqueue_init(&mem);
+
   // sens
   memset(&sens, 0, sizeof(sens));
-  sens.qtmp = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
-  sens.qhum = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
+  sens.qtmp = mqueue_create(SENSORS_QUEUE_SECNUM);
+  sens.qhum = mqueue_create(SENSORS_QUEUE_SECNUM);
   sens.avlt = &avlt;
   sens.aht = &aht;
   sens.timestamp = &timestamp;
@@ -280,9 +284,9 @@ int main(void)
 
   // ecnt
   memset(&ecnt, 0, sizeof(ecnt));
-  ecnt.qec_avg = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
-  ecnt.qec_max = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
-  ecnt.qec_min = xQueueCreate(SENSORS_QUEUE_LEN, sizeof(struct item));
+  ecnt.qec_avg = mqueue_create(SENSORS_QUEUE_SECNUM);
+  ecnt.qec_max = mqueue_create(SENSORS_QUEUE_SECNUM);
+  ecnt.qec_min = mqueue_create(SENSORS_QUEUE_SECNUM);
   ecnt.cnt = &cnt;
   ecnt.timestamp = &timestamp;
   ecnt.params = &params;

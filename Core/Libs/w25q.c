@@ -2,7 +2,7 @@
  * W25Q Serial FLASH memory
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2025
  */
 
 #include "w25q.h"
@@ -89,6 +89,15 @@ static uint8_t spi_read_status_reg(struct w25q *mem, uint8_t status_reg)
 	return buffer;
 }
 
+static void write_enable(struct w25q *mem)
+{
+	uint8_t header = W25Q_CMD_WRITE_ENABLE;
+
+	cs_low(mem);
+	HAL_SPI_Transmit(mem->spi, &header, 1, HAL_MAX_DELAY);
+	cs_high(mem);
+}
+
 static void power_down(struct w25q *mem)
 {
 	uint8_t header = W25Q_CMD_POWER_DOWN;
@@ -147,6 +156,8 @@ void w25q_sector_erase(struct w25q *mem, uint32_t address)
 	header[2] = address >> 8;
 	header[3] = address;
 
+	write_enable(mem);
+
 	cs_low(mem);
 	HAL_SPI_Transmit(mem->spi, header, 4, HAL_MAX_DELAY);
 	cs_high(mem);
@@ -166,6 +177,8 @@ void w25q_block_erase(struct w25q *mem, uint32_t address)
 	header[2] = address >> 8;
 	header[3] = address;
 
+	write_enable(mem);
+
 	cs_low(mem);
 	HAL_SPI_Transmit(mem->spi, header, 4, HAL_MAX_DELAY);
 	cs_high(mem);
@@ -180,6 +193,8 @@ void w25q_chip_erase(struct w25q *mem)
 {
 	uint8_t header = W25Q_CMD_CHIP_ERASE;
 
+	write_enable(mem);
+
 	cs_low(mem);
 	HAL_SPI_Transmit(mem->spi, &header, 1, HAL_MAX_DELAY);
 	cs_high(mem);
@@ -187,16 +202,6 @@ void w25q_chip_erase(struct w25q *mem)
 	delay();
 	while (spi_read_status_reg(mem, W25Q_CMD_READ_STATUS_REG1) &
 			W25Q_BUSY_FLAG_MASK);
-}
-
-/******************************************************************************/
-void w25q_write_enable(struct w25q *mem)
-{
-	uint8_t header = W25Q_CMD_WRITE_ENABLE;
-
-	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, &header, 1, HAL_MAX_DELAY);
-	cs_high(mem);
 }
 
 /******************************************************************************/
@@ -226,6 +231,8 @@ void w25q_write_data(struct w25q *mem, uint32_t address, uint8_t *data,
 	header[1] = address >> 16;
 	header[2] = address >> 8;
 	header[3] = address;
+
+	write_enable(mem);
 
 	cs_low(mem);
 	HAL_SPI_Transmit(mem->spi, header, 4, HAL_MAX_DELAY);

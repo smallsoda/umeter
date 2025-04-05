@@ -185,7 +185,6 @@ static void mem_erase(struct w25q *mem, uint32_t addr, uint16_t size)
 {
 	while (size)
 	{
-		w25q_write_enable(mem);
 		w25q_sector_erase(mem, addr);
 
 		if (size > W25Q_SECTOR_SIZE)
@@ -208,7 +207,6 @@ static void mem_write(struct w25q *mem, uint32_t addr, uint8_t *buf,
 		else
 			ws = size;
 
-		w25q_write_enable(mem);
 		w25q_write_data(mem, addr, buf, ws);
 
 		size -= ws;
@@ -219,7 +217,6 @@ static void mem_write(struct w25q *mem, uint32_t addr, uint8_t *buf,
 
 static void mem_write_header(struct w25q *mem, struct fws *fws)
 {
-	w25q_write_enable(mem);
 	w25q_sector_erase(mem, FWS_HEADER_ADDR);
 	mem_write(mem, FWS_HEADER_ADDR, (uint8_t *) fws, sizeof(struct fws));
 }

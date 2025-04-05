@@ -17,6 +17,7 @@
 #include "strjson.h"
 #include "base64.h"
 #include "params.h"
+#include "queue.h"
 #include "main.h"
 #include "hmac.h"
 #include "fws.h"
@@ -26,10 +27,10 @@
 
 #define JSON_MAX_TOKENS 8
 
-#define SENSORS_BUF_LEN (SENSORS_QUEUE_LEN * sizeof(struct item))
-#define SENSORS_STR_LEN (4 * ((SENSORS_BUF_LEN + 2) / 3) + 1)
-
 #define MAX_QTY_FROM_QUEUE 4
+
+#define SENSORS_BUF_LEN (MAX_QTY_FROM_QUEUE * sizeof(struct item))
+#define SENSORS_STR_LEN (4 * ((SENSORS_BUF_LEN + 2) / 3) + 1)
 
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
@@ -42,7 +43,6 @@ static const osThreadAttr_t attributes = {
   .stack_size = 288 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-
 
 //static void voltage_callback(int status, void *data)
 //{
@@ -107,15 +107,24 @@ static int parse_json_time(const char *response, uint32_t *ts)
 	return 0;
 }
 
-static void sensor_base64(QueueHandle_t queue, char *buf)
+static void sensor_base64(mqueue_t *queue, char *buf)
 {
 	struct item item[MAX_QTY_FROM_QUEUE];
 	size_t enclen;
 	int i = 0;
+	int ret;
 
-	while (i < MAX_QTY_FROM_QUEUE &&
-			xQueueReceive(queue, &item[i], 0) == pdTRUE)
+	for (;;)
 	{
+		if (i >= MAX_QTY_FROM_QUEUE)
+			break;
+
+		ret = mqueue_get(queue, &item[i]);
+		if (ret == -MFIFO_ERR_INVALID_CRC)
+			continue;
+		if (ret)
+			break;
+
 		i++;
 	}
 
@@ -306,15 +315,15 @@ static void task(void *argument)
 			vPortFree(httpd.response);
 
 		// Are all queues empty?
-		if (uxQueueMessagesWaiting(app->ecnt->qec_avg))
+		if (!mqueue_is_empty(app->ecnt->qec_avg))
 			continue; /* for */
-		if (uxQueueMessagesWaiting(app->ecnt->qec_min))
+		if (!mqueue_is_empty(app->ecnt->qec_min))
 			continue; /* for */
-		if (uxQueueMessagesWaiting(app->ecnt->qec_max))
+		if (!mqueue_is_empty(app->ecnt->qec_max))
 			continue; /* for */
-		if (uxQueueMessagesWaiting(app->sens->qtmp))
+		if (!mqueue_is_empty(app->sens->qtmp))
 			continue; /* for */
-		if (uxQueueMessagesWaiting(app->sens->qhum))
+		if (!mqueue_is_empty(app->sens->qhum))
 			continue; /* for */
 
 		blink();

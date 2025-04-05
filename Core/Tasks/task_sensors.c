@@ -119,13 +119,13 @@ static void task(void *argument)
 		{
 			item.value = temperature;
 			item.timestamp = *sens->timestamp;
-			xQueueSendToBack(sens->qtmp, &item, 0);
+			mqueue_set(sens->qtmp, &item);
 		}
 		if (drdy & DRDY_HUM)
 		{
 			item.value = humidity;
 			item.timestamp = *sens->timestamp;
-			xQueueSendToBack(sens->qhum, &item, 0);
+			mqueue_set(sens->qhum, &item);
 		}
 
 		vTaskDelayUntil(&wake, pdMS_TO_TICKS(sens->params->period_sen * 1000));

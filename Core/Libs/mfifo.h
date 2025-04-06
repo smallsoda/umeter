@@ -18,15 +18,15 @@
  */
 enum mfifo_status
 {
-    MFIFO_OK = 0,
-    MFIFO_ERR_NOT_SUPPORTED,
-    MFIFO_ERR_INVALID_ARGUMENT,
-    MFIFO_ERR_INVALID_CRC,
-    MFIFO_ERR_NO_FREE_SPACE,
-    MFIFO_ERR_EMPTY,
+	MFIFO_OK = 0,
+	MFIFO_ERR_NOT_SUPPORTED,
+	MFIFO_ERR_INVALID_ARGUMENT,
+	MFIFO_ERR_INVALID_CRC,
+	MFIFO_ERR_NO_FREE_SPACE,
+	MFIFO_ERR_EMPTY,
 	MFIFO_ERR_ALLOC,
 	MFIFO_ERR_LOCK,
-    MFIFO_ERR_IO
+	MFIFO_ERR_IO
 };
 
 /*
@@ -37,15 +37,15 @@ struct mfifo
 	SemaphoreHandle_t mutex;
 	struct w25q_s *mem;
 
-    size_t secsize;
-    size_t esize;
-    uint8_t *buf;
+	size_t secsize;
+	size_t esize;
+	uint8_t *buf;
 
-    uint32_t addr;
-    size_t secnum;
+	uint32_t addr;
+	size_t secnum;
 
-    uint32_t set;
-    uint32_t get;
+	uint32_t set;
+	uint32_t get;
 };
 
 

@@ -54,7 +54,6 @@
 									<listOptionValue builtIn="false" value="../Core/Tasks"/>
 									<listOptionValue builtIn="false" value="../hmac_sha256"/>
 									<listOptionValue builtIn="false" value="../jsmn"/>
-									<listOptionValue builtIn="false" value="../mfifo"/>
 								</option>
 								<option IS_BUILTIN_EMPTY="false" IS_VALUE_EMPTY="true" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.otherflags.1297132068" name="Other flags" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.option.otherflags" useByScannerDiscovery="true" valueType="stringList"/>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1625151393" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>

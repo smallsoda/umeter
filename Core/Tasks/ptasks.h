@@ -19,7 +19,7 @@
 #include "mqueue.h"
 #include "ota.h"
 
-#define SENSORS_QUEUE_SECNUM 2
+#define SENSORS_QUEUE_SECNUM 16
 
 struct actual
 {

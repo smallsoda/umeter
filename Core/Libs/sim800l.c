@@ -21,7 +21,7 @@
  * Without this feature power consumption will be about 1 mA, but module will be
  * always connected to cellular network. Use only if SIM800L is used rarely
  */
-//#define DISABLE_RF
+#define DISABLE_RF
 
 #include "logger.h"
 #define TAG "SIM800L"

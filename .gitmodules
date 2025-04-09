@@ -1,6 +1,6 @@
-[submodule "hmac_sha256"]
-	path = hmac_sha256
-	url = https://github.com/cminyard/hmac_sha256.git
 [submodule "jsmn"]
 	path = jsmn
 	url = https://github.com/zserge/jsmn.git
+[submodule "hmac_sha256"]
+	path = hmac_sha256
+	url = https://github.com/smallsoda/hmac_sha256.git

@@ -18,9 +18,8 @@ extern const uint32_t *_app_len;
 #define APP_LENGTH ((uint32_t) &_app_len)
 
 #define APP_END_ADDR (FWS_PAYLOAD_ADDR + APP_LENGTH)
-#define APP_END_SEC_ADDR ((APP_END_ADDR / W25Q_SECTOR_SIZE) * W25Q_SECTOR_SIZE)
-#define FIFO_ADDR (APP_END_SEC_ADDR + \
-		((APP_LENGTH % W25Q_SECTOR_SIZE) ? W25Q_SECTOR_SIZE : 0))
+#define FIFO_SECTOR ((APP_END_ADDR + (W25Q_SECTOR_SIZE - 1)) / W25Q_SECTOR_SIZE)
+#define FIFO_ADDR (FIFO_SECTOR * W25Q_SECTOR_SIZE)
 
 static struct
 {

@@ -113,6 +113,7 @@ struct actual actual;
 struct sensors sens;
 struct ecounter ecnt;
 struct app app;
+struct system sys;
 
 extern const uint32_t *_app;
 #define APP_ADDRESS ((uint32_t) &_app)
@@ -302,6 +303,12 @@ int main(void)
   app.mod = &mod;
   app.bl = &bl;
 
+  // sys
+  memset(&sys, 0, sizeof(sys));
+  sys.ext_pin = GPIO_PIN_3;
+  sys.ext_port = GPIOB;
+  sys.wdg = &hiwdg;
+
   //
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, ub_sif, UART_BUFFER_SIZE);
   HAL_UARTEx_ReceiveToIdle_DMA(&huart2, ub_mod, UART_BUFFER_SIZE);
@@ -337,7 +344,7 @@ int main(void)
   defHandle = osThreadNew(task_default, NULL, &def_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  task_system(&hiwdg);
+  task_system(&sys);
   task_siface(&siface);
   task_sensors(&sens);
   task_ecounter(&ecnt);
@@ -683,7 +690,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1|SPI2_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(RST_GPIO_Port, RST_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3|RST_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : PC13 */
   GPIO_InitStruct.Pin = GPIO_PIN_13;
@@ -705,8 +712,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB1 SPI2_CS_Pin RST_Pin */
-  GPIO_InitStruct.Pin = GPIO_PIN_1|SPI2_CS_Pin|RST_Pin;
+  /*Configure GPIO pins : PB1 SPI2_CS_Pin PB3 RST_Pin */
+  GPIO_InitStruct.Pin = GPIO_PIN_1|SPI2_CS_Pin|GPIO_PIN_3|RST_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

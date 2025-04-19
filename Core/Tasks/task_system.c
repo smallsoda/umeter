@@ -18,19 +18,23 @@ static const osThreadAttr_t attributes = {
 
 static void task(void *argument)
 {
-	IWDG_HandleTypeDef *wdg = argument;
+	struct system *sys = argument;
 
 	for(;;)
 	{
 		// 40kH / 128 / 4095 -> 13,104 seconds
-		HAL_IWDG_Refresh(wdg);
-		osDelay(5000);
+		HAL_IWDG_Refresh(sys->wdg);
+
+		// External watchdog (CBM706TAS8, ADM708TARZ) -> 1,6 seconds
+		HAL_GPIO_TogglePin(sys->ext_port, sys->ext_pin);
+
+		osDelay(1000);
 	}
 }
 
 /******************************************************************************/
-void task_system(IWDG_HandleTypeDef *wdg)
+void task_system(struct system *sys)
 {
-	handle = osThreadNew(task, wdg, &attributes);
+	handle = osThreadNew(task, sys, &attributes);
 }
 

@@ -29,6 +29,11 @@
 
 #define W25Q_BUSY_FLAG_MASK 0x01
 
+#define BLOCK_ERASE_TIMEOUT 5000
+#define CHIP_ERASE_TIMEOUT  (5 * 60 * 1000)
+#define BUSY_TIMEOUT        1000
+#define SPI_TIMEOUT         100
+
 enum capacity
 {
 	W25Q_CAPACITY_2    = 0x11, // W25Q10 (2 * 64KB)
@@ -67,8 +72,8 @@ static uint32_t spi_read_id(struct w25q *mem)
 	uint32_t id;
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, &header, 1, HAL_MAX_DELAY);
-	HAL_SPI_Receive(mem->spi, buffer, 3, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, &header, 1, SPI_TIMEOUT);
+	HAL_SPI_Receive(mem->spi, buffer, 3, SPI_TIMEOUT);
 	cs_high(mem);
 
 	id = (buffer[0] << 16) | (buffer[1] << 8) | buffer[2];
@@ -82,8 +87,8 @@ static uint8_t spi_read_status_reg(struct w25q *mem, uint8_t status_reg)
 	uint8_t header = status_reg;
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, &header, 1, HAL_MAX_DELAY);
-	HAL_SPI_Receive(mem->spi, &buffer, 1, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, &header, 1, SPI_TIMEOUT);
+	HAL_SPI_Receive(mem->spi, &buffer, 1, SPI_TIMEOUT);
 	cs_high(mem);
 
 	return buffer;
@@ -94,7 +99,7 @@ static void write_enable(struct w25q *mem)
 	uint8_t header = W25Q_CMD_WRITE_ENABLE;
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, &header, 1, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, &header, 1, SPI_TIMEOUT);
 	cs_high(mem);
 }
 
@@ -103,7 +108,7 @@ static void power_down(struct w25q *mem)
 	uint8_t header = W25Q_CMD_POWER_DOWN;
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, &header, 1, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, &header, 1, SPI_TIMEOUT);
 	cs_high(mem);
 
 	delay();
@@ -114,7 +119,7 @@ static void release_power_down(struct w25q *mem)
 	uint8_t header = W25Q_CMD_RELEASE_POWER_DOWN;
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, &header, 1, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, &header, 1, SPI_TIMEOUT);
 	cs_high(mem);
 
 	delay();
@@ -151,6 +156,8 @@ void w25q_hw_deinit(struct w25q *mem)
 void w25q_sector_erase(struct w25q *mem, uint32_t address)
 {
 	uint8_t header[4];
+	uint32_t ms;
+
 	header[0] = W25Q_CMD_SECTOR_ERASE;
 	header[1] = address >> 16;
 	header[2] = address >> 8;
@@ -159,12 +166,17 @@ void w25q_sector_erase(struct w25q *mem, uint32_t address)
 	write_enable(mem);
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, header, 4, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, header, 4, SPI_TIMEOUT);
 	cs_high(mem);
 
 	delay();
+	ms = HAL_GetTick();
 	while (spi_read_status_reg(mem, W25Q_CMD_READ_STATUS_REG1) &
-			W25Q_BUSY_FLAG_MASK);
+			W25Q_BUSY_FLAG_MASK)
+	{
+		if ((HAL_GetTick() - ms) > BUSY_TIMEOUT)
+			return;
+	}
 }
 
 /******************************************************************************/
@@ -172,6 +184,8 @@ void w25q_sector_erase(struct w25q *mem, uint32_t address)
 void w25q_block_erase(struct w25q *mem, uint32_t address)
 {
 	uint8_t header[4];
+	uint32_t ms;
+
 	header[0] = W25Q_CMD_BLOCK_ERASE;
 	header[1] = address >> 16;
 	header[2] = address >> 8;
@@ -180,28 +194,39 @@ void w25q_block_erase(struct w25q *mem, uint32_t address)
 	write_enable(mem);
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, header, 4, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, header, 4, SPI_TIMEOUT);
 	cs_high(mem);
 
 	delay();
+	ms = HAL_GetTick();
 	while (spi_read_status_reg(mem, W25Q_CMD_READ_STATUS_REG1) &
-			W25Q_BUSY_FLAG_MASK);
+			W25Q_BUSY_FLAG_MASK)
+	{
+		if ((HAL_GetTick() - ms) > BLOCK_ERASE_TIMEOUT)
+			return;
+	}
 }
 
 /******************************************************************************/
 void w25q_chip_erase(struct w25q *mem)
 {
 	uint8_t header = W25Q_CMD_CHIP_ERASE;
+	uint32_t ms;
 
 	write_enable(mem);
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, &header, 1, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, &header, 1, SPI_TIMEOUT);
 	cs_high(mem);
 
 	delay();
+	ms = HAL_GetTick();
 	while (spi_read_status_reg(mem, W25Q_CMD_READ_STATUS_REG1) &
-			W25Q_BUSY_FLAG_MASK);
+			W25Q_BUSY_FLAG_MASK)
+	{
+		if ((HAL_GetTick() - ms) > CHIP_ERASE_TIMEOUT)
+			return;
+	}
 }
 
 /******************************************************************************/
@@ -216,8 +241,8 @@ void w25q_read_data(struct w25q *mem, uint32_t address, uint8_t *data,
 	header[4] = 0x00;
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, header, 5, HAL_MAX_DELAY);
-	HAL_SPI_Receive(mem->spi, data, size, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, header, 5, SPI_TIMEOUT);
+	HAL_SPI_Receive(mem->spi, data, size, SPI_TIMEOUT);
 	cs_high(mem);
 }
 
@@ -227,6 +252,8 @@ void w25q_write_data(struct w25q *mem, uint32_t address, uint8_t *data,
 		uint16_t size)
 {
 	uint8_t header[4];
+	uint32_t ms;
+
 	header[0] = W25Q_CMD_PAGE_PROGRAM;
 	header[1] = address >> 16;
 	header[2] = address >> 8;
@@ -235,13 +262,18 @@ void w25q_write_data(struct w25q *mem, uint32_t address, uint8_t *data,
 	write_enable(mem);
 
 	cs_low(mem);
-	HAL_SPI_Transmit(mem->spi, header, 4, HAL_MAX_DELAY);
-	HAL_SPI_Transmit(mem->spi, data, size, HAL_MAX_DELAY);
+	HAL_SPI_Transmit(mem->spi, header, 4, SPI_TIMEOUT);
+	HAL_SPI_Transmit(mem->spi, data, size, SPI_TIMEOUT);
 	cs_high(mem);
 
 	delay();
+	ms = HAL_GetTick();
 	while (spi_read_status_reg(mem, W25Q_CMD_READ_STATUS_REG1) &
-			W25Q_BUSY_FLAG_MASK);
+			W25Q_BUSY_FLAG_MASK)
+	{
+		if ((HAL_GetTick() - ms) > BUSY_TIMEOUT)
+			return;
+	}
 }
 
 /******************************************************************************/

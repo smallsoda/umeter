@@ -72,13 +72,20 @@ struct app
 	params_t *params;
 };
 
+struct system
+{
+	IWDG_HandleTypeDef *wdg;
+	GPIO_TypeDef *ext_port;
+	uint16_t ext_pin;
+};
+
 
 void task_siface(struct siface *siface);
 void task_sim800l(struct sim800l *mod);
 void task_ota(struct ota *ota);
 void task_app(struct app *app);
 void task_info(struct app *app);
-void task_system(IWDG_HandleTypeDef *wdg);
+void task_system(struct system *sys);
 void task_sensors(struct sensors *sens);
 void task_ecounter(struct ecounter *ecnt);
 

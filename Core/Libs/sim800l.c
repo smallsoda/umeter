@@ -49,6 +49,7 @@ enum state
 	STATE_GPRS_HTTP,
 	STATE_GPRS_HTTP_TERM,
 	STATE_GPRS_DEINIT,
+	STATE_NETSCAN,
 };
 
 enum issue
@@ -56,6 +57,7 @@ enum issue
 	ISSUE_IDLE,
 	ISSUE_VOLTAGE,
 	ISSUE_HTTP,
+	ISSUE_NETSCAN,
 };
 
 
@@ -457,6 +459,91 @@ static int parse_http_status(struct sim800l *mod, timeout_t timeout)
 	return -1;
 }
 
+static int32_t get_param_value(const char *line, const char *param, int base)
+{
+	char *p = strstr(line, param);
+	if (!p)
+		return -1;
+
+	p += strlen(param);
+	if (!*p)
+		return -1;
+
+	p++; // ':'
+	if (!*p)
+		return -1;
+
+	return strtoul(p, NULL, base);
+}
+
+static void shift_buffer_left(struct sim800l *mod, size_t len)
+{
+	uint8_t *p = mod->rxb + len;
+
+	for (size_t i = 0; i < mod->rxlen - len; i++)
+		mod->rxb[i] = p[i];
+	mod->rxlen -= len;
+}
+
+static int parse_net_scan(struct sim800l *mod, timeout_t timeout)
+{
+	struct sim800l_netscan *data = mod->task.data;
+	const char *ending = "OK\r\n";
+	const char *delim = "\r\n";
+	size_t len;
+	char *p;
+
+	while (wait_for_any(mod, timeout))
+	{
+		for (;;)
+		{
+			mod->rxb[mod->rxlen] = '\0';
+
+			p = strstr((char *) mod->rxb, delim);
+			if (!p)
+				break; /* for */
+
+			p += strlen(delim);
+			len = p - (char *) mod->rxb;
+
+			if (!strncmp((char *) mod->rxb, ending, strlen(ending)))
+			{
+				mod->task.callback(SIM800L_NETSCAN_DONE, mod->task.data);
+				return 0;
+			}
+
+			// "\r\n" only
+			if (len == strlen(delim))
+			{
+				shift_buffer_left(mod, len);
+				continue; /* for */
+			}
+
+			// Parameters line
+			mod->rxb[len - 1] = '\0';
+
+			// Parameters
+			data->mcc = get_param_value((char *) mod->rxb, "MCC", 10);
+			data->mnc = get_param_value((char *) mod->rxb, "MNC", 10);
+			data->lac = get_param_value((char *) mod->rxb, "Lac", 16);
+			data->cid = get_param_value((char *) mod->rxb, "Cellid", 16);
+			data->lev = get_param_value((char *) mod->rxb, "Rxlev", 10);
+
+			if (data->mcc >= 0 && data->mnc >= 0 && data->lac >= 0 &&
+					data->cid >= 0 && data->lev >= 0)
+			{
+				data->lev = data->lev - 113;
+				mod->task.callback(0, mod->task.data);
+			}
+
+			// <--
+			shift_buffer_left(mod, len);
+		}
+	}
+
+	return -1;
+}
+
 inline static void upd_voltage_data(struct sim800l *mod)
 {
 	struct sim800l_voltage *data = mod->task.data;
@@ -652,6 +739,10 @@ void sim800l_task(struct sim800l *mod)
 			case ISSUE_HTTP:
 				state(mod, STATE_CREG, STATUS_OK);
 				break;
+
+			case ISSUE_NETSCAN:
+				state(mod, STATE_CREG, STATUS_OK);
+				break;
 			}
 			break;
 
@@ -680,14 +771,21 @@ void sim800l_task(struct sim800l *mod)
 				if (compare_buffer_beginning(mod,
 						"\r\n+CREG: 0,1\r\n\r\nOK\r\n", 5000))
 				{
-					state(mod, STATE_GPRS_INIT, STATUS_OK);
 					done = true;
 					break; /* while */
 				}
 				osDelay(1000);
 			}
 			if (!done)
+			{
 				state(mod, STATE_IDLE, STATUS_ERROR);
+				break;
+			}
+
+			if (mod->task.issue == ISSUE_NETSCAN)
+				state(mod, STATE_NETSCAN, STATUS_OK);
+			else /* ISSUE_HTTP */
+				state(mod, STATE_GPRS_INIT, STATUS_OK);
 			break;
 
 		case STATE_GPRS_INIT:
@@ -865,6 +963,22 @@ void sim800l_task(struct sim800l *mod)
 			else
 				state(mod, STATE_IDLE, STATUS_ERROR);
 			break;
+
+		case STATE_NETSCAN:
+			transmit(mod, "AT+CNETSCAN=1");
+			if (!compare_buffer_beginning(mod, "\r\nOK\r\n", 500))
+			{
+				state(mod, STATE_IDLE, STATUS_ERROR);
+				break;
+			}
+
+			transmit(mod, "AT+CNETSCAN");
+			if(!parse_net_scan(mod, 45000)) // Callbacks inside
+			{
+				task_done(mod);
+				state(mod, STATE_IDLE, STATUS_OK);
+			}
+			break;
 		}
 	}
 }
@@ -900,6 +1014,26 @@ int sim800l_http(struct sim800l *mod, struct sim800l_http *data,
 	data->res_auth = NULL;
 
 	task.issue = ISSUE_HTTP;
+	task.timeout = pdMS_TO_TICKS(timeout);
+	task.callback = callback;
+	task.data = data;
+
+	status = xQueueSendToBack(mod->queue, &task, 0);
+
+	if (status == pdTRUE)
+		return 0;
+
+	return -1;
+}
+
+/******************************************************************************/
+int sim800l_netscan(struct sim800l *mod, struct sim800l_netscan *data,
+		sim800l_cb callback, timeout_t timeout)
+{
+	struct sim800l_task task;
+	BaseType_t status;
+
+	task.issue = ISSUE_NETSCAN;
 	task.timeout = pdMS_TO_TICKS(timeout);
 	task.callback = callback;
 	task.data = data;

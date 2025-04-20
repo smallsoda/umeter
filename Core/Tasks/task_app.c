@@ -29,11 +29,15 @@
 
 #define MAX_QTY_FROM_QUEUE 4
 
+#define NETSCAN_MAX_NETS 4
+
 #define SENSORS_BUF_LEN (MAX_QTY_FROM_QUEUE * sizeof(struct item))
 #define SENSORS_STR_LEN (4 * ((SENSORS_BUF_LEN + 2) / 3) + 1)
 
 #define HTTP_TIMEOUT_1MIN 60000
 #define HTTP_TIMEOUT_2MIN 120000
+
+#define NETSCAN_TIMEOUT_1MIN 60000
 
 #define READ_TAMPER (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15)) // TODO
 
@@ -44,24 +48,52 @@ static const osThreadAttr_t attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 
+struct netprms
+{
+	int32_t mcc;
+	int32_t mnc;
+	int32_t lac;
+	int32_t cid;
+	int32_t lev;
+};
+
+
 //static void voltage_callback(int status, void *data)
 //{
 //	struct sim800l_voltage *vd = data;
-//
 //	BaseType_t woken = pdFALSE;
-//	vTaskNotifyGiveFromISR(handle, &woken);
 //
 //	*((int *) vd->context) = status;
+//
+//	vTaskNotifyGiveFromISR(handle, &woken);
 //}
 
 static void http_callback(int status, void *data)
 {
 	struct sim800l_http *httpd = data;
-
 	BaseType_t woken = pdFALSE;
-	vTaskNotifyGiveFromISR(handle, &woken);
 
 	*((int *) httpd->context) = status;
+
+	vTaskNotifyGiveFromISR(handle, &woken);
+}
+
+static void netscan_callback(int status, void *data)
+{
+	struct sim800l_netscan *netscan = data;
+	xQueueHandle queue = netscan->context;
+	BaseType_t woken = pdFALSE;
+	struct netprms prms;
+
+	prms.mcc = netscan->mcc;
+	prms.mnc = netscan->mnc;
+	prms.lac = netscan->lac;
+	prms.cid = netscan->cid;
+	prms.lev = netscan->lev;
+	xQueueSendToBack(queue, &prms, 0);
+
+	if (status != 0)
+		vTaskNotifyGiveFromISR(handle, &woken);
 }
 
 static void blink(void)
@@ -147,7 +179,10 @@ static void task(void *argument)
 	struct app *app = argument;
 
 //	struct sim800l_voltage vd;
+	struct sim800l_netscan netscan;
 	struct sim800l_http httpd;
+	struct netprms netprms;
+	xQueueHandle netqueue;
 	TickType_t wake;
 	char *request;
 	char *sensor;
@@ -157,6 +192,8 @@ static void task(void *argument)
 	int status;
 	int avail;
 	int ret;
+
+	// TODO: free all resources before vTaskDelete()
 
 	request = pvPortMalloc(512); // NOTE: ?
 	if (!request)
@@ -250,6 +287,32 @@ static void task(void *argument)
 
 	if (httpd.response)
 		vPortFree(httpd.response);
+
+	// Net scan
+	netqueue = xQueueCreate(NETSCAN_MAX_NETS, sizeof(struct netprms));
+	if (netqueue)
+	{
+		netscan.context = netqueue;
+		sim800l_netscan(app->mod, &netscan, netscan_callback,
+				NETSCAN_TIMEOUT_1MIN);
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+		while (xQueueReceive(netqueue, &netprms, 0) == pdPASS)
+		{
+			// TODO: Replace
+			strjson_init(request);
+			strjson_int(request, "mcc", netprms.mcc);
+			strjson_int(request, "mnc", netprms.mnc);
+			strjson_int(request, "lac", netprms.lac);
+			strjson_int(request, "cid", netprms.cid);
+			strjson_int(request, "lev", netprms.lev);
+
+			logger_add_str(app->logger, TAG, true, request);
+			osDelay(100);
+		}
+
+		vQueueDelete(netqueue);
+	}
 
 	wake = xTaskGetTickCount();
 

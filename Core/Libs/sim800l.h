@@ -23,6 +23,8 @@
 
 #define SIM800L_APN_SIZE 32
 
+#define SIM800L_NETSCAN_DONE 1
+
 typedef uint64_t timeout_t;
 
 typedef void (*sim800l_cb)(int, void *);
@@ -98,6 +100,21 @@ struct sim800l_http
 	void *context;
 };
 
+/*
+ * @brief: Net scan request structure
+ * TODO: fields description
+ */
+struct sim800l_netscan
+{
+	int32_t mcc;
+	int32_t mnc;
+	int32_t lac;
+	int32_t cid;
+	int32_t lev;
+
+	void *context;
+};
+
 
 /*
  * @brief: struct sim800l handle initialization
@@ -156,6 +173,18 @@ int sim800l_voltage(struct sim800l *mod, struct sim800l_voltage *data,
  * @retval: 0 on success, -1 on failure
  */
 int sim800l_http(struct sim800l *mod, struct sim800l_http *data,
+		sim800l_cb callback, timeout_t timeout);
+
+/*
+ * @brief: Add net scan request to SIM800L task queue
+ * @param mod: struct sim800l handle
+ * @param data: Request parameters
+ * @param callback: User callback after receiving every set of net parameters,
+ *     net scan done or timeout
+ * @param timeout: Timeout in ms
+ * @retval: 0 on success, -1 on failure
+ */
+int sim800l_netscan(struct sim800l *mod, struct sim800l_netscan *data,
 		sim800l_cb callback, timeout_t timeout);
 
 #endif /* SIM800L_H_ */

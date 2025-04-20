@@ -29,7 +29,7 @@
 
 #define MAX_QTY_FROM_QUEUE 4
 
-#define NETSCAN_MAX_NETS 4
+#define NETSCAN_MAX_NETS 8
 
 #define SENSORS_BUF_LEN (MAX_QTY_FROM_QUEUE * sizeof(struct item))
 #define SENSORS_STR_LEN (4 * ((SENSORS_BUF_LEN + 2) / 3) + 1)
@@ -184,10 +184,13 @@ static void task(void *argument)
 	struct netprms netprms;
 	xQueueHandle netqueue;
 	TickType_t wake;
+	uint32_t ts;
+
 	char *request;
 	char *sensor;
 	char *hmac;
 	char *url;
+
 	int voltage;
 	int status;
 	int avail;
@@ -211,8 +214,13 @@ static void task(void *argument)
 	if (!request)
 		vTaskDelete(NULL);
 
+	netqueue = xQueueCreate(NETSCAN_MAX_NETS, sizeof(struct netprms));
+	if (!netqueue)
+		vTaskDelete(NULL);
+
 //	vd.context = &status;
 	httpd.context = &status;
+	netscan.context = netqueue;
 
 	// <- /api/time
 	strcpy(url, app->params->url_app);
@@ -289,30 +297,40 @@ static void task(void *argument)
 		vPortFree(httpd.response);
 
 	// Net scan
-	netqueue = xQueueCreate(NETSCAN_MAX_NETS, sizeof(struct netprms));
-	if (netqueue)
+	sim800l_netscan(app->mod, &netscan, netscan_callback, NETSCAN_TIMEOUT_1MIN);
+	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+	// -> /api/cnet
+	strcpy(url, app->params->url_app);
+	strcat(url, "/api/cnet");
+	ts = *app->timestamp;
+	while (xQueueReceive(netqueue, &netprms, 0) == pdPASS)
 	{
-		netscan.context = netqueue;
-		sim800l_netscan(app->mod, &netscan, netscan_callback,
-				NETSCAN_TIMEOUT_1MIN);
+		// NOTE: Choose only one with the best "lev"?
+		strjson_init(request);
+		strjson_uint(request, "uid", app->params->id);
+		strjson_uint(request, "ts", ts);
+		strjson_int(request, "mcc", netprms.mcc);
+		strjson_int(request, "mnc", netprms.mnc);
+		strjson_int(request, "lac", netprms.lac);
+		strjson_int(request, "cid", netprms.cid);
+		strjson_int(request, "lev", netprms.lev);
+
+		hmac_base64(app->params->secret, request, strlen(request), hmac);
+		httpd.url = url;
+		httpd.req_auth = hmac;
+		httpd.res_auth = NULL; // Unnecessary
+		httpd.res_auth_get = false;
+		httpd.request = request;
+		httpd.response = NULL; // Unnecessary
+
+		sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_1MIN);
 		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
-		while (xQueueReceive(netqueue, &netprms, 0) == pdPASS)
-		{
-			// TODO: Replace
-			strjson_init(request);
-			strjson_int(request, "mcc", netprms.mcc);
-			strjson_int(request, "mnc", netprms.mnc);
-			strjson_int(request, "lac", netprms.lac);
-			strjson_int(request, "cid", netprms.cid);
-			strjson_int(request, "lev", netprms.lev);
-
-			logger_add_str(app->logger, TAG, true, request);
-			osDelay(100);
-		}
-
-		vQueueDelete(netqueue);
+		if (httpd.response)
+			vPortFree(httpd.response);
 	}
+	vQueueDelete(netqueue);
 
 	wake = xTaskGetTickCount();
 

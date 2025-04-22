@@ -13,7 +13,7 @@
 #include "cmsis_os.h"
 #include "queue.h"
 
-#define MAX_DATA_LEN 128
+#define MAX_DATA_LEN 96
 
 
 /******************************************************************************/

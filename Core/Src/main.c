@@ -260,7 +260,7 @@ int main(void)
   memcpy(&appif.uparams, &params, sizeof(params));
 
   //
-  siface_init(&siface, &huart1, 32, appiface, &appif);
+  siface_init(&siface, &huart1, 16, appiface, &appif);
   logger_init(&logger, &siface);
   w25q_s_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);

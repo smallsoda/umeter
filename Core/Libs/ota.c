@@ -282,9 +282,13 @@ void ota_task(struct ota *ota)
 	if (!hmac)
 		vTaskDelete(NULL);
 
+	goto startup;
+
 	for (;;)
 	{
 		osDelay(30 * 60 * 1000); // TODO: Increase
+
+startup:
 
 		// Request firmware list
 		ret = request_list(ota, &http);
@@ -336,7 +340,10 @@ void ota_task(struct ota *ota)
 			// Request newest firmware file
 			ret = request_file(ota, &http, filename, addr, FILE_PART_SIZE);
 			if (ret)
-				continue;
+			{
+				retries--;
+				continue; /* while */
+			}
 			ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(DELAY_SIM800L_MS));
 
 			// Error

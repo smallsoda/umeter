@@ -31,6 +31,7 @@ static void task(void *argument)
 	uint32_t max = 0;
 	uint32_t sum = 0;
 	uint32_t value;
+	uint32_t ts;
 
 	TickType_t wake = xTaskGetTickCount();
 	TickType_t psen = xTaskGetTickCount();
@@ -64,10 +65,11 @@ static void task(void *argument)
 				pdMS_TO_TICKS(ecnt->params->period_sen * 1000))
 		{
 			psen = xTaskGetTickCount();
+			ts = *ecnt->timestamp;
 
 			// max
 			item.value = max;
-			item.timestamp = *ecnt->timestamp;
+			item.timestamp = ts;
 			mqueue_set(ecnt->qec_max, &item);
 
 			// min
@@ -75,7 +77,7 @@ static void task(void *argument)
 				item.value = min;
 			else
 				item.value = 0;
-			item.timestamp = *ecnt->timestamp;
+			item.timestamp = ts;
 			mqueue_set(ecnt->qec_min, &item);
 
 			// avg
@@ -83,7 +85,7 @@ static void task(void *argument)
 				item.value = sum / sumcnt;
 			else
 				item.value = 0;
-			item.timestamp = *ecnt->timestamp;
+			item.timestamp = ts;
 			mqueue_set(ecnt->qec_avg, &item);
 
 			min = COUNT_MIN_INIT;

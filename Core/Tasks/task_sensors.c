@@ -54,6 +54,7 @@ static void task(void *argument)
 	int32_t temperature = 0;
 	int32_t humidity = 0;
 	int voltage = 0;
+	uint32_t ts;
 
 	char *savail;
 
@@ -114,17 +115,19 @@ static void task(void *argument)
 			sens->actual->humidity = humidity;
 		xSemaphoreGive(sens->actual->mutex);
 
+		ts = *sens->timestamp;
+
 		// Add sensor readings to queues
 		if (drdy & DRDY_TMP)
 		{
 			item.value = temperature;
-			item.timestamp = *sens->timestamp;
+			item.timestamp = ts;
 			mqueue_set(sens->qtmp, &item);
 		}
 		if (drdy & DRDY_HUM)
 		{
 			item.value = humidity;
-			item.timestamp = *sens->timestamp;
+			item.timestamp = ts;
 			mqueue_set(sens->qhum, &item);
 		}
 

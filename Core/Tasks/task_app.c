@@ -39,12 +39,14 @@
 
 #define NETSCAN_TIMEOUT_1MIN 60000
 
+#define TIME_UPDATE_PERIOD (24 * 60 * 60 * 1000)
+
 #define READ_TAMPER (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_15)) // TODO
 
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "app",
-  .stack_size = 288 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 
@@ -58,22 +60,12 @@ struct netprms
 };
 
 
-//static void voltage_callback(int status, void *data)
-//{
-//	struct sim800l_voltage *vd = data;
-//	BaseType_t woken = pdFALSE;
-//
-//	*((int *) vd->context) = status;
-//
-//	vTaskNotifyGiveFromISR(handle, &woken);
-//}
-
 static void http_callback(int status, void *data)
 {
-	struct sim800l_http *httpd = data;
+	struct sim800l_http *http = data;
 	BaseType_t woken = pdFALSE;
 
-	*((int *) httpd->context) = status;
+	*((int *) http->context) = status;
 
 	vTaskNotifyGiveFromISR(handle, &woken);
 }
@@ -175,84 +167,171 @@ static void strtolower(char *data)
 	}
 }
 
+/**
+ * @brief: Add HTTP GET request to SIM800L task queue
+ * @info: http->url must be already allocated
+ */
+static int http_get(struct app *app, struct sim800l_http *http, const char *api)
+{
+	strcpy(http->url, app->params->url_app);
+	strcat(http->url, api);
+	http->req_auth = NULL; // Not used
+	http->res_auth = NULL; // Unnecessary
+	http->res_auth_get = true;
+	http->request = NULL; // Not used
+	http->response = NULL; // Unnecessary
+
+	return sim800l_http(app->mod, http, http_callback, HTTP_TIMEOUT_2MIN);
+}
+
+/**
+ * @brief: Add HTTP POST request to SIM800L task queue
+ * @info: http->url must be already allocated
+ * @info: http->req_auth must be already allocated
+ * @info: http->request must be already allocated and filled with data
+ */
+static int http_post(struct app *app, struct sim800l_http *http,
+		const char *api)
+{
+	strcpy(http->url, app->params->url_app);
+	strcat(http->url, api);
+	hmac_base64(app->params->secret, http->request, strlen(http->request),
+				http->req_auth);
+	http->res_auth = NULL; // Unnecessary
+	http->res_auth_get = false;
+	http->response = NULL; // Unnecessary
+
+	return sim800l_http(app->mod, http, http_callback, HTTP_TIMEOUT_2MIN);
+}
+
+static int parse_time(struct app *app, struct sim800l_http *http,
+		char *hmacbuf)
+{
+	uint32_t temp;
+	int ret;
+
+	if (!http->res_auth)
+		return -1;
+
+	// NOTE: Ignore case of characters
+	hmac_base64(app->params->secret, http->response, http->rlen, hmacbuf);
+	strtolower(hmacbuf);
+	if (strcmp(hmacbuf, http->res_auth))
+		return -1;
+
+	ret = parse_json_time(http->response, &temp);
+	if (ret)
+		return -1;
+
+	*app->timestamp = temp;
+	logger_add_str(app->logger, TAG, false, http->response);
+
+	return 0;
+}
+
+/**
+ * @brief: Send HTTP GET request, wait and parse response
+ * @info: http->url must be already allocated
+ */
+static int proc_http_get_time(struct app *app, struct sim800l_http *http,
+		char *hmacbuf)
+{
+	int status;
+	int ret;
+
+	http->context = &status;
+
+	ret = http_get(app, http, "/api/time");
+	if (ret)
+		return -1;
+
+	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+	if (!status)
+		ret = parse_time(app, http, hmacbuf);
+
+	if (http->res_auth)
+		vPortFree(http->res_auth);
+	if (http->response)
+		vPortFree(http->response);
+
+	if (status || ret)
+		return -1;
+
+	return 0;
+}
+
+/**
+ * @brief: Send HTTP POST request and wait for response
+ * @info: http->url must be already allocated
+ * @info: http->req_auth must be already allocated
+ * @info: http->request must be already allocated and filled with data
+ */
+static int proc_http_post(struct app *app, struct sim800l_http *http,
+		const char *api)
+{
+	int status;
+	int ret;
+
+	http->context = &status;
+
+	ret = http_post(app, http, api);
+	if (ret)
+		return -1;
+
+	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+	if (http->response)
+		vPortFree(http->response);
+
+	if (status)
+		return -1;
+
+	return 0;
+}
+
 static void task(void *argument)
 {
 	struct app *app = argument;
 
-//	struct sim800l_voltage vd;
 	struct sim800l_netscan netscan;
-	struct sim800l_http httpd;
+	struct sim800l_http get, post;
 	struct netprms netprms;
+	TickType_t period;
+	TickType_t updt;
 	TickType_t wake;
-
-	char *request;
-	char *sensor;
-	char *hmac;
-	char *url;
-
 	int voltage;
-	int status;
 	int avail;
 	int ret;
 
-	// TODO: free all resources before vTaskDelete()
+	char url[PARAMS_APP_URL_SIZE + 32]; // Same for post and get
+	char hmac[HMAC_BASE64_LEN];
+	char request[512]; // NOTE: ?
 
-	request = pvPortMalloc(512); // NOTE: ?
-	if (!request)
-		vTaskDelete(NULL);
+	char sensor[SENSORS_STR_LEN];
 
-	sensor = pvPortMalloc(SENSORS_STR_LEN);
-	if (!sensor)
-		vTaskDelete(NULL);
+	// post buffers
+	post.url = url;
+	post.req_auth = hmac;
+	post.request = request;
 
-	hmac = pvPortMalloc(HMAC_BASE64_LEN);
-	if (!hmac)
-		vTaskDelete(NULL);
+	// get buffers
+	get.url = url;
 
-	url = pvPortMalloc(PARAMS_APP_URL_SIZE + 32);
-	if (!request)
-		vTaskDelete(NULL);
-
+	// netscan
 	memset(&netprms, 0, sizeof(netprms));
 	netprms.lev = NET_LEV_MIN;
-
-//	vd.context = &status;
-	httpd.context = &status;
 	netscan.context = &netprms;
 
+	period = pdMS_TO_TICKS(app->params->period_app * 1000);
+	updt = xTaskGetTickCount();
+	wake = xTaskGetTickCount();
+
+	// >>>
+
 	// <- /api/time
-	strcpy(url, app->params->url_app);
-	strcat(url, "/api/time");
-	httpd.url = url;
-	httpd.req_auth = NULL;
-	httpd.res_auth = NULL; // Unnecessary
-	httpd.res_auth_get = true;
-	httpd.request = NULL;
-	httpd.response = NULL; // Unnecessary
-
-	sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_2MIN);
-	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-	if (!status && httpd.res_auth)
-	{
-		uint32_t temp;
-
-		// NOTE: Ignore case of characters
-		hmac_base64(app->params->secret, httpd.response, httpd.rlen, hmac);
-		strtolower(hmac);
-		if (strcmp(hmac, httpd.res_auth) == 0)
-		{
-			ret = parse_json_time(httpd.response, &temp);
-			if (!ret)
-				*app->timestamp = temp;
-
-			logger_add_str(app->logger, TAG, false, httpd.response);
-		}
-	}
-	if (httpd.res_auth)
-		vPortFree(httpd.res_auth);
-	if (httpd.response)
-		vPortFree(httpd.response);
+	while (proc_http_get_time(app, &get, hmac))
+		vTaskDelayUntil(&wake, period);
 
 	// Available sensors
 	xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
@@ -277,30 +356,16 @@ static void task(void *argument)
 	strjson_uint(request, "mtime_count", app->params->mtime_count);
 	strjson_int(request, "sens", avail);
 
-	strcpy(url, app->params->url_app);
-	strcat(url, "/api/info");
-	hmac_base64(app->params->secret, request, strlen(request), hmac);
+	while (proc_http_post(app, &post, "/api/info"))
+		vTaskDelayUntil(&wake, period);
 
-	httpd.url = url;
-	httpd.req_auth = hmac;
-	httpd.res_auth = NULL; // Unnecessary
-	httpd.res_auth_get = false;
-	httpd.request = request;
-	httpd.response = NULL; // Unnecessary
-
-	sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_2MIN);
-	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-	if (httpd.response)
-		vPortFree(httpd.response);
-
-	// Net scan
-	sim800l_netscan(app->mod, &netscan, netscan_callback, NETSCAN_TIMEOUT_1MIN);
-	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+	// netscan
+	ret = sim800l_netscan(app->mod, &netscan, netscan_callback,
+			NETSCAN_TIMEOUT_1MIN);
+	if (!ret)
+		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 
 	// -> /api/cnet
-	strcpy(url, app->params->url_app);
-	strcat(url, "/api/cnet");
 	strjson_init(request);
 	strjson_uint(request, "uid", app->params->id);
 	strjson_uint(request, "ts", *app->timestamp);
@@ -310,37 +375,19 @@ static void task(void *argument)
 	strjson_int(request, "cid", netprms.cid);
 	strjson_int(request, "lev", netprms.lev);
 
-	hmac_base64(app->params->secret, request, strlen(request), hmac);
-	httpd.url = url;
-	httpd.req_auth = hmac;
-	httpd.res_auth = NULL; // Unnecessary
-	httpd.res_auth_get = false;
-	httpd.request = request;
-	httpd.response = NULL; // Unnecessary
-
-	sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_1MIN);
-	ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-	if (httpd.response)
-		vPortFree(httpd.response);
-
-	wake = xTaskGetTickCount();
+	while (proc_http_post(app, &post, "/api/cnet"))
+		vTaskDelayUntil(&wake, period);
 
 	for (;;)
 	{
-//		// Voltage
-//		sim800l_voltage(app->mod, &vd, voltage_callback, 60000);
-//		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-//		if (status)
-//		{
-//			vd.voltage = 0;
-//		}
-//		else
-//		{
-//			xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
-//			app->sens->actual->voltage = vd.voltage;
-//			xSemaphoreGive(app->sens->actual->mutex);
-//		}
+		if ((xTaskGetTickCount() - updt) >= TIME_UPDATE_PERIOD)
+		{
+			updt = xTaskGetTickCount();
+
+			// <- /api/time
+			while (proc_http_get_time(app, &get, hmac))
+				vTaskDelayUntil(&wake, period);
+		}
 
 		// Voltage and distance
 		xSemaphoreTake(app->sens->actual->mutex, portMAX_DELAY);
@@ -371,36 +418,23 @@ static void task(void *argument)
 			strjson_str(request, "hum", sensor);
 		strjson_int(request, "tamper", READ_TAMPER);
 
-		strcpy(url, app->params->url_app);
-		strcat(url, "/api/data");
-		hmac_base64(app->params->secret, request, strlen(request), hmac);
-		httpd.url = url;
-		httpd.req_auth = hmac;
-		httpd.res_auth = NULL; // Unnecessary
-		httpd.res_auth_get = false;
-		httpd.request = request;
-		httpd.response = NULL; // Unnecessary
-
-		sim800l_http(app->mod, &httpd, http_callback, HTTP_TIMEOUT_1MIN);
-		ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-
-		if (httpd.response)
-			vPortFree(httpd.response);
+		while (proc_http_post(app, &post, "/api/data"))
+			vTaskDelayUntil(&wake, period);
 
 		// Are all queues empty?
 		if (!mqueue_is_empty(app->ecnt->qec_avg))
-			continue; /* for */
+			continue;
 		if (!mqueue_is_empty(app->ecnt->qec_min))
-			continue; /* for */
+			continue;
 		if (!mqueue_is_empty(app->ecnt->qec_max))
-			continue; /* for */
+			continue;
 		if (!mqueue_is_empty(app->sens->qtmp))
-			continue; /* for */
+			continue;
 		if (!mqueue_is_empty(app->sens->qhum))
-			continue; /* for */
+			continue;
 
 		blink();
-		vTaskDelayUntil(&wake, pdMS_TO_TICKS(app->params->period_app * 1000));
+		vTaskDelayUntil(&wake, period);
 	}
 }
 

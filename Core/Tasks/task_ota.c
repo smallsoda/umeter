@@ -10,7 +10,7 @@
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "ota",
-  .stack_size = 320 * 4,
+  .stack_size = 352 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 

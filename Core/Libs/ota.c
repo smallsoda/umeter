@@ -263,24 +263,16 @@ void ota_task(struct ota *ota)
 	struct fws fws;
 	uint32_t addr;
 	int retries;
-	char *hmac;
 	int ret;
 
+	char url[OTA_URL_SIZE + 64];
+	char hmac[HMAC_BASE64_LEN];
+
 	if (w25q_s_get_manufacturer_id(ota->mem) != FWS_WINBOND_MANUFACTURER_ID)
-	{
 		vTaskDelete(NULL);
-		return; // Never be here
-	}
 
 	ota->task = xTaskGetCurrentTaskHandle();
-
-	http.url = pvPortMalloc(OTA_URL_SIZE + 64);
-	if (!http.url)
-		vTaskDelete(NULL);
-
-	hmac = pvPortMalloc(HMAC_BASE64_LEN);
-	if (!hmac)
-		vTaskDelete(NULL);
+	http.url = url;
 
 	goto startup;
 
@@ -289,7 +281,6 @@ void ota_task(struct ota *ota)
 		osDelay(30 * 60 * 1000); // TODO: Increase
 
 startup:
-
 		// Request firmware list
 		ret = request_list(ota, &http);
 		if (ret)

@@ -37,6 +37,7 @@ struct mfifo
 	SemaphoreHandle_t mutex;
 	struct w25q_s *mem;
 
+	size_t pagesize;
 	size_t secsize;
 	size_t esize;
 	uint8_t *buf;
@@ -53,14 +54,15 @@ struct mfifo
  * @brief: mfifo handle initialization
  * @param mfifo: mfifo handle
  * @param mem: w25q_s handle
+ * @param pagesize: hardware storage page size
  * @param secsize: hardware storage sector size
  * @param esize: stored element size
  * @param addr: physical address to start from
  * @param secnum: number of sectors to use
  * @retval: 0 on success, negative error value on failure (enum mfifo_status)
  */
-int mfifo_init(struct mfifo *mfifo, struct w25q_s *mem, size_t secsize,
-		size_t esize, uint32_t addr, size_t secnum);
+int mfifo_init(struct mfifo *mfifo, struct w25q_s *mem, size_t pagesize,
+		size_t secsize, size_t esize, uint32_t addr, size_t secnum);
 
 /*
  * @brief: recover fifo state after startup: find "set" and "get" addresses

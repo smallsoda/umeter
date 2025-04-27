@@ -247,7 +247,7 @@ void w25q_read_data(struct w25q *mem, uint32_t address, uint8_t *data,
 }
 
 /******************************************************************************/
-// Up to 256 bytes
+// Up to W25Q_PAGE_SIZE bytes
 void w25q_write_data(struct w25q *mem, uint32_t address, uint8_t *data,
 		uint16_t size)
 {

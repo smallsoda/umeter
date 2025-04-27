@@ -62,7 +62,7 @@ inline static mqueue_t *create(size_t secnum)
 	if (!q)
 		return NULL;
 
-	ret = mfifo_init(&q->mfifo, mqueue.mem, W25Q_SECTOR_SIZE,
+	ret = mfifo_init(&q->mfifo, mqueue.mem, W25Q_PAGE_SIZE, W25Q_SECTOR_SIZE,
 			sizeof(struct item), mqueue.address, secnum);
 	if (ret)
 	{

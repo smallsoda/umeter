@@ -10,6 +10,7 @@
 
 #include "stm32f1xx_hal.h"
 
+#define W25Q_PAGE_SIZE   256
 #define W25Q_SECTOR_SIZE 4096
 
 struct w25q

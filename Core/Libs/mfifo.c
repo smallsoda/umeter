@@ -27,8 +27,8 @@ struct header
 
 
 /******************************************************************************/
-int mfifo_init(struct mfifo *mfifo, struct w25q_s *mem, size_t secsize,
-		size_t esize, uint32_t addr, size_t secnum)
+int mfifo_init(struct mfifo *mfifo, struct w25q_s *mem, size_t pagesize,
+		size_t secsize, size_t esize, uint32_t addr, size_t secnum)
 {
 	if (!mfifo || !mem || !secsize || !esize || !secnum)
 		return -MFIFO_ERR_INVALID_ARGUMENT;
@@ -36,8 +36,12 @@ int mfifo_init(struct mfifo *mfifo, struct w25q_s *mem, size_t secsize,
 	if (addr % secsize)
 		return -MFIFO_ERR_INVALID_ARGUMENT;
 
+	if (secsize % pagesize)
+		return -MFIFO_ERR_INVALID_ARGUMENT;
+
 	memset(mfifo, 0, sizeof(*mfifo));
 	mfifo->mem = mem;
+	mfifo->pagesize = pagesize;
 	mfifo->secsize = secsize;
 	mfifo->esize = esize;
 	mfifo->addr = addr;
@@ -87,9 +91,9 @@ static uint32_t next_addr(struct mfifo *mfifo, uint32_t addr)
 	// Next address in current sector
 	next = addr + phys_element_size(mfifo);
 
-	// Does element cross the sector border?
-	if ((next % mfifo->secsize + phys_element_size(mfifo)) > mfifo->secsize)
-		next = (next / mfifo->secsize + 1) * mfifo->secsize;
+	// Does element cross the page border?
+	if ((next % mfifo->pagesize + phys_element_size(mfifo)) > mfifo->pagesize)
+		next = (next / mfifo->pagesize + 1) * mfifo->pagesize;
 
 	// Does the address exceed area?
 	if (next / mfifo->secsize == mfifo->secnum)

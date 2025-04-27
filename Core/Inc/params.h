@@ -23,7 +23,7 @@
 #define PARAMS_FW_B1 0
 #define PARAMS_FW_B2 0
 #define PARAMS_FW_B3 4
-#define PARAMS_FW_B4 7
+#define PARAMS_FW_B4 8
 
 #define PARAMS_FW_VERSION \
 		(((uint32_t) PARAMS_FW_B1 << 24) | \

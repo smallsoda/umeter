@@ -122,7 +122,7 @@ Request JSON:
 |ts|uint32|Current datetime (Unix timestamp)|
 |name|string|Device type|
 |bl_git|string|Bootloader source revision|
-|bl_status|uint32|[Bootloader status](https://github.com/smallsoda/umeter/edit/master/README.md#bootloader-status)|
+|bl_status|uint32|[Bootloader status](https://github.com/smallsoda/umeter/blob/master/README.md#bootloader-status)|
 |app_git|string|Application source revision|
 |app_ver|uint32|Application version|
 |mcu|string|MCU unique ID|
@@ -132,7 +132,7 @@ Request JSON:
 |period_app|uint32|Communication with application server period (seconds)|
 |period_sen|uint32|Sensors data update period (seconds)|
 |mtime_count|uint32|Measurement time for counter (seconds)|
-|sens|int32|[Available sensors](https://github.com/smallsoda/umeter/edit/master/README.md#available-sensors) bit mask|
+|sens|int32|[Available sensors](https://github.com/smallsoda/umeter/blob/master/README.md#available-sensors) bit mask|
 
 Response JSON:
 |Field|Type|Description|
@@ -171,11 +171,11 @@ Request JSON:
 |uid|uint32|Always present|Unique device ID|
 |ts|uint32|Always present|Current datetime (Unix timestamp)|
 |bat|int32|+|Battery voltage (mV)|
-|count|string _sensor_base64_|+|Number of counts per `mtime_count` seconds (average value per `period_sen` seconds)|
-|count_min|string _sensor_base64_|+|Number of counts per `mtime_count` seconds (minimal value per `period_sen` seconds)|
-|count_max|string _sensor_base64_|+|Number of counts per `mtime_count` seconds (maximum value per `period_sen` seconds)|
-|temp|string _sensor_base64_|+|Temperature (0,001 °C)|
-|hum|string _sensor_base64_|+|Humidity (0,001%)|
+|count|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Number of counts per `mtime_count` seconds (average value per `period_sen` seconds)|
+|count_min|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Number of counts per `mtime_count` seconds (minimal value per `period_sen` seconds)|
+|count_max|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Number of counts per `mtime_count` seconds (maximum value per `period_sen` seconds)|
+|temp|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Temperature (0,001 °C)|
+|hum|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Humidity (0,001%)|
 |tamper|int32|+|Digital input value (0 or 1)|
 
 Response JSON:

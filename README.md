@@ -1,7 +1,7 @@
 # umeter
 umeter, FreeRTOS, SIM800L
 
-### Connection diagram
+## Connection diagram
 ```
 ╔═════════════════╗                                    ╔═════════════════╗
 ║ SIM800L         ║                                    ║ STM32           ║
@@ -95,12 +95,12 @@ umeter, FreeRTOS, SIM800L
                                                        ╚═════════════════╝
 ```
 
-### Application API
+## Application API
 HTTP packets (without SSL) with "Authorization" header  
 Authorization: HMAC SHA256 in base64 encoding
 
-##### time
-GET `/api/time`  
+### /api/time
+GET  
 _At startup, every 24 hours_  
 Get current datetime
 
@@ -110,8 +110,8 @@ Response JSON:
 |status|string|"ok" on success|
 |ts|uint32|Current datetime (Unix timestamp)|
 
-##### info
-POST `/api/info`  
+### /api/info
+POST  
 _At startup only_  
 Send base device information
 
@@ -122,7 +122,7 @@ Request JSON:
 |ts|uint32|Current datetime (Unix timestamp)|
 |name|string|Device type|
 |bl_git|string|Bootloader source revision|
-|bl_status|uint32|_Bootloader status_|
+|bl_status|uint32|[Bootloader status](https://github.com/smallsoda/umeter/edit/master/README.md#bootloader-status)|
 |app_git|string|Application source revision|
 |app_ver|uint32|Application version|
 |mcu|string|MCU unique ID|
@@ -132,15 +132,15 @@ Request JSON:
 |period_app|uint32|Communication with application server period (seconds)|
 |period_sen|uint32|Sensors data update period (seconds)|
 |mtime_count|uint32|Measurement time for counter (seconds)|
-|sens|int32|_Available sensors_ bit mask|
+|sens|int32|[Available sensors](https://github.com/smallsoda/umeter/edit/master/README.md#available-sensors) bit mask|
 
 Response JSON:
 |Field|Type|Description|
 |-|-|-|
 |status|string|"ok" on success|
 
-##### cnet
-POST `/api/cnet`  
+### /api/cnet
+POST  
 _At startup only_  
 Send information about the nearest cellular base station 
 
@@ -160,8 +160,8 @@ Response JSON:
 |-|-|-|
 |status|string|"ok" on success|
 
-##### data
-POST `/api/data`  
+### /api/data
+POST  
 _Every_ `period_app` _seconds_  
 Send device state and sensors information
 
@@ -183,7 +183,7 @@ Response JSON:
 |-|-|-|
 |status|string|"ok" on success|
 
-#### Bootloader status
+### Bootloader status
 |Status|Description|
 |-|-|
 |0|No new firmware|
@@ -194,7 +194,7 @@ Response JSON:
 |5|Error: invalid checksum (internal memory)|
 |6|Error: could not erase internal memory|
 
-#### Available sensors
+### Available sensors
 |Bit|Sensor|
 |-|-|
 |0x01 (xxxx xxx1)|Voltage|
@@ -206,7 +206,7 @@ Response JSON:
 |0x40 (x1xx xxxx)|-|
 |0x80 (1xxx xxxx)|-|
 
-#### sensor_base64
+### sensor_base64
 Array of data structures in base64 encoding  
 Sensor data structure:
 |Filed|Length|Description|
@@ -214,8 +214,8 @@ Sensor data structure:
 |value|4 bytes, little-endian|Measurement value|
 |ts|4 bytes, little-endian|Measurement datetime (Unix timestamp)|
 
-### OTA API
+## OTA API
 **_?_**
 
-### Serial API
+## Serial API
 **_?_**

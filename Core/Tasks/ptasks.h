@@ -29,6 +29,7 @@ struct actual
 
 	int voltage;
 	uint32_t count;
+	int32_t angle;
 	int32_t humidity;
 	int32_t temperature;
 };
@@ -37,8 +38,10 @@ struct sensors
 {
 	mqueue_t *qtmp;
 	mqueue_t *qhum;
+	mqueue_t *qang;
 
 	struct avoltage *avlt;
+	struct as5600 *pot;
 	struct aht20 *aht;
 	volatile uint32_t *timestamp;
 	params_t *params;

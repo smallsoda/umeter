@@ -37,6 +37,7 @@
 #include "atomic.h"
 #include "mqueue.h"
 #include "w25q_s.h"
+#include "as5600.h"
 #include "aht20.h"
 #include "ota.h"
 #include "fws.h"
@@ -65,6 +66,7 @@
 /* Private variables ---------------------------------------------------------*/
 ADC_HandleTypeDef hadc1;
 
+I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c2;
 
 IWDG_HandleTypeDef hiwdg;
@@ -105,6 +107,7 @@ struct w25q_s mem;
 struct sim800l mod;
 struct ota ota;
 struct aht20 aht;
+struct as5600 pot;
 struct counter cnt;
 struct avoltage avlt;
 struct appiface appif;
@@ -130,6 +133,7 @@ static void MX_SPI2_Init(void);
 static void MX_IWDG_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_I2C1_Init(void);
 void task_default(void *argument);
 
 /* USER CODE BEGIN PFP */
@@ -236,6 +240,7 @@ int main(void)
   MX_IWDG_Init();
   MX_I2C2_Init();
   MX_ADC1_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
   // Deinitialization
@@ -265,6 +270,7 @@ int main(void)
   w25q_s_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, RST_GPIO_Port, RST_Pin, params.apn);
   ota_init(&ota, &mod, &mem, params.secret, params.url_ota);
+  as5600_init(&pot, &hi2c1, MX_I2C1_Init, GPIOB, GPIO_PIN_8 /* 0x6C */);
   aht20_init(&aht, &hi2c2, MX_I2C2_Init, GPIOB, GPIO_PIN_1 /* 0x70 */);
   counter_init(&cnt, GPIOA, GPIO_PIN_1);
   avoltage_init(&avlt, &hadc1, 2);
@@ -276,7 +282,9 @@ int main(void)
   memset(&sens, 0, sizeof(sens));
   sens.qtmp = mqueue_create(SENSORS_QUEUE_SECNUM);
   sens.qhum = mqueue_create(SENSORS_QUEUE_SECNUM);
+  sens.qang = mqueue_create(SENSORS_QUEUE_SECNUM);
   sens.avlt = &avlt;
+  sens.pot = &pot;
   sens.aht = &aht;
   sens.timestamp = &timestamp;
   sens.params = &params;
@@ -469,6 +477,40 @@ static void MX_ADC1_Init(void)
   /* USER CODE BEGIN ADC1_Init 2 */
 
   /* USER CODE END ADC1_Init 2 */
+
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
 
 }
 

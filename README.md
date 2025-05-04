@@ -73,11 +73,14 @@ umeter, FreeRTOS, SIM800L
 ╚═════════════════╝                                    ║                 ║
                                                        ╟─────────────────╢
 ╔═════════════════╗                                    ║                 ║
-║ HMC5883L        ║                                    ║                 ║
-║ (module)    SDA ╟───────────────────────────────  x──╢ PB7             ║
-║             SCL ╟───────────────────────────────  x──╢ PB6             ║
-║            DRDY ╟───────────────────────────────  x──╢ PA6             ║
-║             VCC ╟───────────────────────────────  x──╢ PA7             ║
+║ AS5600          ║                                    ║                 ║
+║ (module)    DIR ╟─> GND                              ║                 ║
+║             SCL ╟────────────────────────────────────╢ PB6             ║
+║             SDA ╟────────────────────────────────────╢ PB7             ║
+║             GPO ╟─                                   ║                 ║
+║                 ║                                    ║                 ║
+║             VCC ╟───────────────────────────────── ?─╢ PB8             ║
+║             OUT ╟─                                   ║                 ║
 ║             GND ╟─> GND                              ║                 ║
 ╚═════════════════╝                                    ║                 ║
                                                        ╟─────────────────╢
@@ -97,7 +100,7 @@ umeter, FreeRTOS, SIM800L
 
 ## Application API
 HTTP packets (without SSL) with "Authorization" header  
-Authorization: HMAC SHA256 in base64 encoding
+Authorization: payload HMAC SHA256 in base64 encoding
 
 ### /api/time
 GET  
@@ -122,7 +125,7 @@ Request JSON:
 |ts|uint32|Current datetime (Unix timestamp)|
 |name|string|Device type|
 |bl_git|string|Bootloader source revision|
-|bl_status|uint32|[Bootloader status](https://github.com/smallsoda/umeter/blob/master/README.md#bootloader-status)|
+|bl_status|uint32|[Bootloader status](/README.md#bootloader-status)|
 |app_git|string|Application source revision|
 |app_ver|uint32|Application version|
 |mcu|string|MCU unique ID|
@@ -132,7 +135,7 @@ Request JSON:
 |period_app|uint32|Communication with application server period (seconds)|
 |period_sen|uint32|Sensors data update period (seconds)|
 |mtime_count|uint32|Measurement time for counter (seconds)|
-|sens|int32|[Available sensors](https://github.com/smallsoda/umeter/blob/master/README.md#available-sensors) bit mask|
+|sens|int32|[Available sensors](/README.md#available-sensors) bit mask|
 
 Response JSON:
 |Field|Type|Description|
@@ -170,13 +173,14 @@ Request JSON:
 |-|-|-|-|
 |uid|uint32|Always present|Unique device ID|
 |ts|uint32|Always present|Current datetime (Unix timestamp)|
-|bat|int32|+|Battery voltage (mV)|
-|count|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Number of counts per `mtime_count` seconds (average value per `period_sen` seconds)|
-|count_min|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Number of counts per `mtime_count` seconds (minimal value per `period_sen` seconds)|
-|count_max|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Number of counts per `mtime_count` seconds (maximum value per `period_sen` seconds)|
-|temp|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Temperature (0,001 °C)|
-|hum|string [sensor_base64](https://github.com/smallsoda/umeter/blob/master/README.md#sensor_base64)|+|Humidity (0,001%)|
-|tamper|int32|+|Digital input value (0 or 1)|
+|bat|int32|Optional|Battery voltage (mV)|
+|count|string [sensor_base64](/README.md#sensor_base64)|Optional|Number of counts per `mtime_count` seconds (average value per `period_sen` seconds)|
+|count_min|string [sensor_base64](/README.md#sensor_base64)|Optional|Number of counts per `mtime_count` seconds (minimal value per `period_sen` seconds)|
+|count_max|string [sensor_base64](/README.md#sensor_base64)|Optional|Number of counts per `mtime_count` seconds (maximum value per `period_sen` seconds)|
+|temp|string [sensor_base64](/README.md#sensor_base64)|Optional|Temperature (0,001 °C)|
+|hum|string [sensor_base64](/README.md#sensor_base64)|Optional|Humidity (0,001%)|
+|angle|string [sensor_base64](/README.md#sensor_base64)|Optional|Angle (0,001°)|
+|tamper|int32|Optional|Digital input value (0 or 1)|
 
 Response JSON:
 |Field|Type|Description|
@@ -202,17 +206,14 @@ Response JSON:
 |0x04 (xxxx x1xx)|TMPx75 _(not used)_|
 |0x08 (xxxx 1xxx)|AHT20|
 |0x10 (xxx1 xxxx)|Distance _(not used)_|
-|0x20 (xx1x xxxx)|-|
-|0x40 (x1xx xxxx)|-|
-|0x80 (1xxx xxxx)|-|
 
 ### sensor_base64
 Array of data structures in base64 encoding  
 Sensor data structure:
-|Filed|Length|Description|
-|-|-|-|
-|value|4 bytes, little-endian|Measurement value|
-|ts|4 bytes, little-endian|Measurement datetime (Unix timestamp)|
+|Offset|Length|Endian|Description|
+|-|-|-|-|
+|0 bytes|4 bytes|little-endian|Value|
+|4 bytes|4 bytes|little-endian|Measurement datetime (Unix timestamp)|
 
 ## OTA API
 **_?_**

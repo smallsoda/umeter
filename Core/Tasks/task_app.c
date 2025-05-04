@@ -416,6 +416,9 @@ static void task(void *argument)
 		sensor_base64(app->sens->qhum, sensor); /* Humidity */
 		if (*sensor)
 			strjson_str(request, "hum", sensor);
+		sensor_base64(app->sens->qang, sensor); /* Angle */
+		if (*sensor)
+			strjson_str(request, "angle", sensor);
 		strjson_int(request, "tamper", READ_TAMPER);
 
 		while (proc_http_post(app, &post, "/api/data"))
@@ -431,6 +434,8 @@ static void task(void *argument)
 		if (!mqueue_is_empty(app->sens->qtmp))
 			continue;
 		if (!mqueue_is_empty(app->sens->qhum))
+			continue;
+		if (!mqueue_is_empty(app->sens->qang))
 			continue;
 
 		blink();

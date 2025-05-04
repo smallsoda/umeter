@@ -206,6 +206,7 @@ Response JSON:
 |0x04 (xxxx x1xx)|TMPx75 _(not used)_|
 |0x08 (xxxx 1xxx)|AHT20|
 |0x10 (xxx1 xxxx)|Distance _(not used)_|
+|0x20 (xx1x xxxx)|AS5600|
 
 ### sensor_base64
 Array of data structures in base64 encoding  

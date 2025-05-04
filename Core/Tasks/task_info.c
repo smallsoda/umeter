@@ -17,6 +17,7 @@
 
 #include "logger.h"
 #define TAG "INFO"
+extern struct logger logger;
 
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
@@ -48,15 +49,15 @@ static void info(struct app *app)
 {
 	char temp[32];
 
-	print_info_str(app->logger, "BL", "git", (char *) app->bl->hash);
+	print_info_str(&logger, "BL", "git", (char *) app->bl->hash);
 	utoa(app->bl->status, temp, 10);
-	print_info_str(app->logger, "BL", "status", temp);
+	print_info_str(&logger, "BL", "status", temp);
 
-	print_info_str(app->logger, "APP", "git", GIT_COMMIT_HASH);
-	print_info_str(app->logger, "APP", "name", PARAMS_DEVICE_NAME);
+	print_info_str(&logger, "APP", "git", GIT_COMMIT_HASH);
+	print_info_str(&logger, "APP", "name", PARAMS_DEVICE_NAME);
 	utoa(PARAMS_FW_VERSION, temp, 10);
-	print_info_str(app->logger, "APP", "ver", temp);
-	print_info_str(app->logger, "APP", "MCU", app->params->mcu_uid);
+	print_info_str(&logger, "APP", "ver", temp);
+	print_info_str(&logger, "APP", "MCU", app->params->mcu_uid);
 }
 
 static void task(void *argument)
@@ -76,7 +77,7 @@ static void task(void *argument)
 		osDelay(20000);
 
 		utoa(xPortGetMinimumEverFreeHeapSize(), temp, 10);
-		print_info_str(app->logger, "HEAP", "heap", temp);
+		print_info_str(&logger, "HEAP", "heap", temp);
 
 		int idx = 0;
 		while (t_names[idx])
@@ -87,7 +88,7 @@ static void task(void *argument)
 				vTaskGetInfo(t_handle, &details, pdTRUE, eInvalid);
 				utoa(details.usStackHighWaterMark * sizeof(StackType_t),
 						temp, 10);
-				print_info_str(app->logger, "STACK", t_names[idx], temp);
+				print_info_str(&logger, "STACK", t_names[idx], temp);
 			}
 			idx++;
 		}

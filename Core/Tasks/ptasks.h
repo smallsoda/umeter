@@ -46,7 +46,6 @@ struct sensors
 	volatile uint32_t *timestamp;
 	params_t *params;
 
-	struct logger *logger;
 	struct actual *actual;
 };
 
@@ -68,7 +67,6 @@ struct app
 	struct sim800l *mod;
 	struct sensors *sens;
 	struct ecounter *ecnt;
-	struct logger *logger;
 
 	volatile uint32_t *timestamp;
 	volatile struct bl_params *bl;

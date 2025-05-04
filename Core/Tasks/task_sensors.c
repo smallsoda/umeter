@@ -15,6 +15,7 @@
 
 #include "logger.h"
 #define TAG "SENSORS"
+extern struct logger logger;
 
 //#define AVOLTAGE_CALIB
 
@@ -92,7 +93,7 @@ static void task(void *argument)
 	{
 		itoa(avail, savail, 2);
 		strcat(savail, "b");
-		logger_add_str(sens->logger, TAG, false, savail);
+		logger_add_str(&logger, TAG, false, savail);
 		vPortFree(savail);
 	}
 

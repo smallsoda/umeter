@@ -24,6 +24,7 @@
 
 #include "logger.h"
 #define TAG "APP"
+extern struct logger logger;
 
 #define JSON_MAX_TOKENS 8
 
@@ -224,7 +225,7 @@ static int parse_time(struct app *app, struct sim800l_http *http,
 		return -1;
 
 	*app->timestamp = temp;
-	logger_add_str(app->logger, TAG, false, http->response);
+	logger_add_str(&logger, TAG, false, http->response);
 
 	return 0;
 }

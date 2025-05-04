@@ -288,7 +288,6 @@ int main(void)
   sens.aht = &aht;
   sens.timestamp = &timestamp;
   sens.params = &params;
-  sens.logger = &logger;
   sens.actual = &actual;
 
   // ecnt
@@ -305,7 +304,6 @@ int main(void)
   memset(&app, 0, sizeof(app));
   app.timestamp = &timestamp;
   app.params = &params;
-  app.logger = &logger;
   app.sens = &sens;
   app.ecnt = &ecnt;
   app.mod = &mod;

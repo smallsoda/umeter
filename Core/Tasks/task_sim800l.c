@@ -10,7 +10,7 @@
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "sim800l",
-  .stack_size = 128 * 4,
+  .stack_size = 112 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 

@@ -57,6 +57,8 @@
 	(SIM800L_UART_BUFFER_SIZE > SIFACE_UART_BUFFER_SIZE ? \
 	SIM800L_UART_BUFFER_SIZE : SIFACE_UART_BUFFER_SIZE)
 
+#define STACK_COLOR_WORD 0xACACACAC
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -122,6 +124,8 @@ struct system sys;
 
 volatile int init_done = 0;
 
+extern const uint32_t *_ebss;
+extern const uint32_t *_estack;
 extern const uint32_t *_app;
 #define APP_ADDRESS ((uint32_t) &_app)
 
@@ -146,12 +150,6 @@ void task_default(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-//void DWT_cnt_init(void)
-//{
-//	CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
-//	DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
-//}
 
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t size)
 {
@@ -214,6 +212,37 @@ void btn_callback(void)
 	task_sensors_notify(&sens);
 }
 
+//
+static void stack_color(void)
+{
+	volatile uint32_t *p, *end;
+
+	p = (uint32_t *) &_ebss;
+	end = (uint32_t *) __get_MSP();
+	p++;
+
+	while (p < end)
+	{
+		*p = STACK_COLOR_WORD;
+		p++;
+	}
+}
+
+//
+static size_t stack_size(void)
+{
+	volatile uint32_t *p, *end;
+
+	p = (uint32_t *) &_ebss;
+	end = (uint32_t *) &_estack;
+	p++;
+
+	while ((p < end) && (*p == STACK_COLOR_WORD))
+		p++;
+
+	return (size_t) end - (size_t) p;
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -227,6 +256,9 @@ int main(void)
 
   SCB->VTOR = APP_ADDRESS;
   __enable_irq();
+
+  //
+  stack_color();
 
   /* USER CODE END 1 */
 
@@ -385,6 +417,10 @@ int main(void)
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
+
+  //
+  sys.main_stack_size = stack_size();
+
   /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
 

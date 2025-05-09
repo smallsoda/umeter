@@ -20,7 +20,7 @@ extern struct logger logger;
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "system",
-  .stack_size = 128 * 4,
+  .stack_size = 120 * 4,
   .priority = (osPriority_t) osPriorityBelowNormal,
 };
 
@@ -46,6 +46,9 @@ static void print_info_str(struct logger *logger, const char *header,
 static void info_base(struct system *sys)
 {
 	char temp[32];
+
+	utoa(sys->main_stack_size, temp, 10);
+	print_info_str(&logger, "MAIN", "stack_size", temp);
 
 	print_info_str(&logger, "BL", "git", (char *) sys->bl->hash);
 	utoa(sys->bl->status, temp, 10);

@@ -19,7 +19,7 @@
 #include "fws.h"
 
 #define DELAY_HTTP_MS 60000
-#define DELAY_SIM800L_MS (DELAY_HTTP_MS + 30000)
+#define DELAY_SIM800L_MS (DELAY_HTTP_MS * 5)
 
 #define JSON_MAX_TOKENS 32
 

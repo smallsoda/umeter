@@ -83,6 +83,8 @@ struct system
 
 	volatile struct bl_params *bl;
 	params_t *params;
+
+	size_t main_stack_size;
 };
 
 

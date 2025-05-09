@@ -47,7 +47,7 @@ extern struct logger logger;
 static osThreadId_t handle;
 static const osThreadAttr_t attributes = {
   .name = "app",
-  .stack_size = 512 * 4,
+  .stack_size = 496 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 

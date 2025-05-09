@@ -14,6 +14,7 @@
 #include "avoltage.h"
 #include "counter.h"
 #include "sim800l.h"
+#include "button.h"
 #include "siface.h"
 #include "params.h"
 #include "mqueue.h"
@@ -47,6 +48,7 @@ struct sensors
 	params_t *params;
 
 	struct actual *actual;
+	volatile uint32_t events;
 };
 
 struct ecounter
@@ -78,6 +80,9 @@ struct system
 	IWDG_HandleTypeDef *wdg;
 	GPIO_TypeDef *ext_port;
 	uint16_t ext_pin;
+
+	volatile struct bl_params *bl;
+	params_t *params;
 };
 
 
@@ -85,9 +90,11 @@ void task_siface(struct siface *siface);
 void task_sim800l(struct sim800l *mod);
 void task_ota(struct ota *ota);
 void task_app(struct app *app);
-void task_info(struct app *app);
 void task_system(struct system *sys);
+void task_button(struct button *btn);
 void task_sensors(struct sensors *sens);
 void task_ecounter(struct ecounter *ecnt);
+
+void task_sensors_notify(struct sensors *sens);
 
 #endif /* UMETER_TASKS_H_ */

@@ -86,6 +86,7 @@ static void set_default(params_t *params)
 	params->period_app = 60 * 5;
 	params->period_sen = 60;
 	params->mtime_count = 10;
+	params->offset_angle = 0;
 }
 
 void params_init(void)

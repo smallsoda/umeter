@@ -31,6 +31,7 @@
 #include "avoltage.h"
 #include "sim800l.h"
 #include "ptasks.h"
+#include "button.h"
 #include "siface.h"
 #include "logger.h"
 #include "params.h"
@@ -101,6 +102,7 @@ uint8_t ub_mod[UART_BUFFER_SIZE];
 uint8_t ub_sif[UART_BUFFER_SIZE];
 
 params_t params;
+struct button btn;
 struct siface siface;
 struct logger logger;
 struct w25q_s mem;
@@ -117,6 +119,8 @@ struct sensors sens;
 struct ecounter ecnt;
 struct app app;
 struct system sys;
+
+volatile int init_done = 0;
 
 extern const uint32_t *_app;
 #define APP_ADDRESS ((uint32_t) &_app)
@@ -188,6 +192,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
+	if (!init_done)
+		return;
+
 	if (GPIO_Pin == GPIO_PIN_0)
 	{
 		counter_irq(&cnt);
@@ -197,6 +204,14 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void hz_callback(TimerHandle_t timer)
 {
 	atomic_inc(&timestamp);
+}
+
+void btn_callback(void)
+{
+	if (!init_done)
+		return;
+
+	task_sensors_notify(&sens);
 }
 
 /* USER CODE END 0 */
@@ -265,6 +280,7 @@ int main(void)
   memcpy(&appif.uparams, &params, sizeof(params));
 
   //
+  button_init(&btn, GPIOB, GPIO_PIN_4, btn_callback);
   siface_init(&siface, &huart1, 16, appiface, &appif);
   logger_init(&logger, &siface);
   w25q_s_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
@@ -289,6 +305,7 @@ int main(void)
   sens.timestamp = &timestamp;
   sens.params = &params;
   sens.actual = &actual;
+  sens.events = 0;
 
   // ecnt
   memset(&ecnt, 0, sizeof(ecnt));
@@ -314,6 +331,8 @@ int main(void)
   sys.ext_pin = GPIO_PIN_3;
   sys.ext_port = GPIOB;
   sys.wdg = &hiwdg;
+  sys.params = &params;
+  sys.bl = &bl;
 
   //
   HAL_UARTEx_ReceiveToIdle_DMA(&huart1, ub_sif, UART_BUFFER_SIZE);
@@ -355,9 +374,12 @@ int main(void)
   task_sensors(&sens);
   task_ecounter(&ecnt);
   task_sim800l(&mod);
+  task_button(&btn);
   task_ota(&ota);
   task_app(&app);
-  task_info(&app);
+
+  // For GPIO interrupts and button (?)
+  init_done = 1;
 
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -766,6 +788,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PB4 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);

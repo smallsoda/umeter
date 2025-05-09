@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "atomic.h"
 #include "as5600.h"
 #include "aht20.h"
 
@@ -18,6 +19,7 @@
 extern struct logger logger;
 
 //#define AVOLTAGE_CALIB
+#define ANGLE_MAX 360000
 
 enum
 {
@@ -35,7 +37,7 @@ enum
 	DRDY_CNT  = 0x02, // Not used
 	DRDY_TMP  = 0x04,
 	DRDY_HUM  = 0x08,
-	DRDY_DIST = 0x10,  // Not used
+	DRDY_DIST = 0x10, // Not used
 	DRDY_ANG  = 0x20,
 };
 
@@ -46,6 +48,19 @@ static const osThreadAttr_t attributes = {
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
 
+static void set_angle_offset(params_t *params, int32_t angle)
+{
+	params_t uparams;
+
+	memcpy(&uparams, params, sizeof(uparams));
+	uparams.offset_angle = angle;
+
+	osDelay(500);
+	vTaskSuspendAll();
+	params_set(&uparams);
+
+	NVIC_SystemReset(); // --> RESET
+}
 
 static void task(void *argument)
 {
@@ -57,13 +72,14 @@ static void task(void *argument)
 
 	int32_t temperature = 0;
 	int32_t humidity = 0;
+	int32_t angle_wo = 0; // With offset
 	int32_t angle = 0;
 	int voltage = 0;
 	uint32_t ts;
 
-	char *savail;
+	char *tmp;
 
-	TickType_t wake = xTaskGetTickCount();
+//	TickType_t wake = xTaskGetTickCount();
 
 	// Voltage
 #ifdef AVOLTAGE_CALIB
@@ -88,13 +104,13 @@ static void task(void *argument)
 	sens->actual->avail = avail;
 	xSemaphoreGive(sens->actual->mutex);
 
-	savail = pvPortMalloc(sizeof(avail) * 8 + 2); // + "b\0"
-	if (savail)
+	tmp = pvPortMalloc(sizeof(avail) * 8 + 2); // + "b\0"
+	if (tmp)
 	{
-		itoa(avail, savail, 2);
-		strcat(savail, "b");
-		logger_add_str(&logger, TAG, false, savail);
-		vPortFree(savail);
+		itoa(avail, tmp, 2);
+		strcat(tmp, "b");
+		logger_add_str(&logger, TAG, false, tmp);
+		vPortFree(tmp);
 	}
 
 	for (;;)
@@ -118,8 +134,17 @@ static void task(void *argument)
 		{
 			angle = as5600_read(sens->pot);
 			if (angle >= 0)
+			{
 				drdy |= DRDY_ANG;
+
+				if (angle >= sens->params->offset_angle)
+					angle_wo = angle - sens->params->offset_angle;
+				else
+					angle_wo = ANGLE_MAX + angle - sens->params->offset_angle;
+			}
 		}
+
+		ts = *sens->timestamp;
 
 		// Save sensor readings
 		xSemaphoreTake(sens->actual->mutex, portMAX_DELAY);
@@ -130,10 +155,8 @@ static void task(void *argument)
 		if (drdy & DRDY_HUM)
 			sens->actual->humidity = humidity;
 		if (drdy & DRDY_ANG)
-			sens->actual->angle = angle;
+			sens->actual->angle = angle_wo;
 		xSemaphoreGive(sens->actual->mutex);
-
-		ts = *sens->timestamp;
 
 		// Add sensor readings to queues
 		if (drdy & DRDY_TMP)
@@ -150,12 +173,22 @@ static void task(void *argument)
 		}
 		if (drdy & DRDY_ANG)
 		{
-			item.value = angle;
+			item.value = angle_wo;
 			item.timestamp = ts;
 			mqueue_set(sens->qang, &item);
 		}
 
-		vTaskDelayUntil(&wake, pdMS_TO_TICKS(sens->params->period_sen * 1000));
+		if (sens->events)
+		{
+			sens->events = 0;
+
+			if (drdy & DRDY_ANG)
+				set_angle_offset(sens->params, angle);
+		}
+
+//		vTaskDelayUntil(&wake, pdMS_TO_TICKS(sens->params->period_sen * 1000));
+		ulTaskNotifyTake(pdTRUE,
+				pdMS_TO_TICKS(sens->params->period_sen * 1000));
 	}
 }
 
@@ -165,3 +198,11 @@ void task_sensors(struct sensors *sens)
 	handle = osThreadNew(task, sens, &attributes);
 }
 
+/******************************************************************************/
+void task_sensors_notify(struct sensors *sens)
+{
+	BaseType_t woken = pdFALSE;
+
+	atomic_inc(&sens->events);
+	vTaskNotifyGiveFromISR(handle, &woken);
+}

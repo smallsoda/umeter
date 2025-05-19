@@ -131,7 +131,7 @@ Request JSON:
 |ts|uint32|Current datetime (Unix timestamp)|
 |name|string|Device type|
 |bl_git|string|Bootloader source revision|
-|bl_status|uint32|[Bootloader status](/README.md#bootloader-status)|
+|bl_status|uint32|[Bootloader status](#bootloader-status)|
 |app_git|string|Application source revision|
 |app_ver|uint32|Application version|
 |mcu|string|MCU unique ID|
@@ -141,7 +141,7 @@ Request JSON:
 |period_app|uint32|Communication with application server period (seconds)|
 |period_sen|uint32|Sensors data update period (seconds)|
 |mtime_count|uint32|Measurement time for counter (seconds)|
-|sens|int32|[Available sensors](/README.md#available-sensors) bit mask|
+|sens|int32|[Available sensors](#available-sensors) bit mask|
 
 Response JSON:
 |Field|Type|Description|
@@ -180,12 +180,12 @@ Request JSON:
 |uid|uint32|Always present|Unique device ID|
 |ts|uint32|Always present|Current datetime (Unix timestamp)|
 |bat|int32|Optional|Battery voltage (mV)|
-|count|string [sensor_base64](/README.md#sensor_base64)|Optional|Number of counts per `mtime_count` seconds (average value per `period_sen` seconds)|
-|count_min|string [sensor_base64](/README.md#sensor_base64)|Optional|Number of counts per `mtime_count` seconds (minimal value per `period_sen` seconds)|
-|count_max|string [sensor_base64](/README.md#sensor_base64)|Optional|Number of counts per `mtime_count` seconds (maximum value per `period_sen` seconds)|
-|temp|string [sensor_base64](/README.md#sensor_base64)|Optional|Temperature (0,001 °C)|
-|hum|string [sensor_base64](/README.md#sensor_base64)|Optional|Humidity (0,001%)|
-|angle|string [sensor_base64](/README.md#sensor_base64)|Optional|Angle (0,001°)|
+|count|string [sensor_base64](#sensor_base64)|Optional|Number of counts per `mtime_count` seconds (average value per `period_sen` seconds)|
+|count_min|string [sensor_base64](#sensor_base64)|Optional|Number of counts per `mtime_count` seconds (minimal value per `period_sen` seconds)|
+|count_max|string [sensor_base64](#sensor_base64)|Optional|Number of counts per `mtime_count` seconds (maximum value per `period_sen` seconds)|
+|temp|string [sensor_base64](#sensor_base64)|Optional|Temperature (0,001 °C)|
+|hum|string [sensor_base64](#sensor_base64)|Optional|Humidity (0,001%)|
+|angle|string [sensor_base64](#sensor_base64)|Optional|Angle (0,001°)|
 |tamper|int32|Optional|Digital input value (0 or 1)|
 
 Response JSON:

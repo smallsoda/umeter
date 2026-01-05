@@ -2,7 +2,7 @@
  * Over-the-air (OTA) firmware update
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #include "ota.h"
@@ -42,7 +42,8 @@ void ota_init(struct ota *ota, struct sim800l *mod, struct w25q_s *mem,
 	ota->mod = mod;
 	ota->mem = mem;
 	memcpy(ota->secret, secret, sizeof(ota->secret));
-	strcpy(ota->url, url);
+	strncpy(ota->url, url, sizeof(ota->url) - 1);
+	ota->url[sizeof(ota->url) - 1] = '\0';
 }
 
 // https://github.com/zserge/jsmn/blob/master/example/simple.c

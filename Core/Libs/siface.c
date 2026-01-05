@@ -2,12 +2,14 @@
  * Serial interface
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2026
  */
 
 #include "siface.h"
 
 #include <string.h>
+
+#include "usbd_cdc_if.h"
 
 #define EVENT_TX     (1 << 0)
 #define EVENT_RX     (1 << 1)
@@ -15,11 +17,11 @@
 
 
 /******************************************************************************/
-void siface_init(struct siface *siface, UART_HandleTypeDef *uart, size_t qsize,
-		siface_cb callback, void *context)
+void siface_init(struct siface *siface, /*UART_HandleTypeDef *uart,*/
+		size_t qsize, siface_cb callback, void *context)
 {
 	memset(siface, 0, sizeof(*siface));
-	siface->uart = uart;
+//	siface->uart = uart;
 	siface->events = xEventGroupCreate();
 	siface->stream = xStreamBufferCreate(SIFACE_BUFFER_SIZE, 1);
 	siface->queue = xQueueCreate(qsize, sizeof(void *));
@@ -120,8 +122,9 @@ void siface_task(struct siface *siface)
 				num--;
 
 				xQueueReceive(siface->queue, &string, portMAX_DELAY);
-				HAL_UART_Transmit_DMA(siface->uart, (uint8_t *) string,
-						strlen(string));
+//				HAL_UART_Transmit_DMA(siface->uart, (uint8_t *) string,
+//						strlen(string));
+				CDC_Transmit_FS((uint8_t *) string, strlen(string));
 				xEventGroupWaitBits(siface->events, EVENT_TX, pdTRUE, pdFALSE,
 						1000);
 				vPortFree(string);

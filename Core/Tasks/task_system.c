@@ -2,7 +2,7 @@
  * System task
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #include "ptasks.h"
@@ -105,7 +105,7 @@ static void task(void *argument)
 			info_mem();
 		}
 
-		// 40kH / 128 / 4095 -> 13,104 seconds
+		// 32kHz / 128 / 4095 -> 16,38 seconds
 		HAL_IWDG_Refresh(sys->wdg);
 
 		// External watchdog (CBM706TAS8, ADM708TARZ) -> 1,6 seconds

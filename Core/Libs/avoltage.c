@@ -2,7 +2,7 @@
  * Analog voltage meter
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 // TODO: Wrong ADC values
@@ -31,7 +31,8 @@ int avoltage_calib(struct avoltage *avlt)
 	HAL_StatusTypeDef status;
 
 	xSemaphoreTake(avlt->mutex, portMAX_DELAY);
-	status = HAL_ADCEx_Calibration_Start(avlt->adc);
+//	status = HAL_ADCEx_Calibration_Start(avlt->adc);
+	status = HAL_OK; /* todo: remove calibration */
 	xSemaphoreGive(avlt->mutex);
 
 	if (status != HAL_OK)

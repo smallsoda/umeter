@@ -2,13 +2,13 @@
  * Button
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2025
+ * 2025-2026
  */
 
 #ifndef BUTTON_H_
 #define BUTTON_H_
 
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 struct button
 {

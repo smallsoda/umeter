@@ -2,13 +2,13 @@
  * Pulse counter
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #ifndef COUNTER_H_
 #define COUNTER_H_
 
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 struct counter
 {

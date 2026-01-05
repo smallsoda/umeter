@@ -2,13 +2,13 @@
  * Atomic operations
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2026
  */
 
 #ifndef ATOMIC_H_
 #define ATOMIC_H_
 
-#include "stm32f103xb.h"
+#include "stm32f401xe.h"
 
 
 inline static void atomic_inc(volatile uint32_t *pv)

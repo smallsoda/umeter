@@ -2,7 +2,7 @@
  * Parameters (FLASH storage)
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #ifndef PARAMS_H_
@@ -18,12 +18,12 @@
 #define GIT_COMMIT_HASH "-"
 #endif
 
-#define PARAMS_DEVICE_NAME "umeter-a1"
+#define PARAMS_DEVICE_NAME "umeter-b1"
 
 #define PARAMS_FW_B1 0
 #define PARAMS_FW_B2 0
-#define PARAMS_FW_B3 4
-#define PARAMS_FW_B4 13
+#define PARAMS_FW_B3 5
+#define PARAMS_FW_B4 1
 
 #define PARAMS_FW_VERSION \
 		(((uint32_t) PARAMS_FW_B1 << 24) | \

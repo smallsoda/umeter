@@ -2,13 +2,13 @@
  * AHT20 humidity and temperature sensor
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #ifndef AHT20_H_
 #define AHT20_H_
 
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 typedef void (*aht20_hw_init)(void);
 

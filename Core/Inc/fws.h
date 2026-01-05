@@ -2,7 +2,7 @@
  * Firmware storage
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2026
  */
 
 #ifndef FWS_H_
@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 #include "w25q_s.h"
 
 #define FWS_HEADER_ADDR  0x00

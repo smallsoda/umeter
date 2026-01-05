@@ -2,13 +2,13 @@
  * W25Q Serial FLASH memory
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #ifndef W25Q_H_
 #define W25Q_H_
 
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 #define W25Q_PAGE_SIZE   256
 #define W25Q_SECTOR_SIZE 4096

@@ -2,13 +2,13 @@
  * Analog voltage meter
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #ifndef AVOLTAGE_H_
 #define AVOLTAGE_H_
 
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 #include "cmsis_os.h"
 #include "semphr.h"

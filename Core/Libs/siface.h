@@ -2,13 +2,13 @@
  * Serial interface
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024
+ * 2024-2026
  */
 
 #ifndef SIFACE_H_
 #define SIFACE_H_
 
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 #include "cmsis_os.h"
 #include "stream_buffer.h"
@@ -22,7 +22,7 @@ typedef int (*siface_cb)(void *);
 
 struct siface
 {
-	UART_HandleTypeDef *uart;
+//	UART_HandleTypeDef *uart;
 
 	EventGroupHandle_t events;
 	StreamBufferHandle_t stream;
@@ -36,8 +36,8 @@ struct siface
 };
 
 
-void siface_init(struct siface *siface, UART_HandleTypeDef *uart, size_t qsize,
-		siface_cb callback, void *context);
+void siface_init(struct siface *siface, /*UART_HandleTypeDef *uart,*/
+		size_t qsize, siface_cb callback, void *context);
 void siface_wakeup(struct siface *siface);
 void siface_rx_irq(struct siface *siface, const char *buf, size_t len);
 void siface_tx_irq(struct siface *siface);

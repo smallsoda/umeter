@@ -2,7 +2,7 @@
  * SIM800L library
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #include "sim800l.h"
@@ -88,7 +88,8 @@ void sim800l_init(struct sim800l *mod, UART_HandleTypeDef *uart,
 	mod->queue = xQueueCreate(SIM800L_TASK_QUEUE_SIZE,
 			sizeof(struct sim800l_task));
 
-	strcpy(mod->apn, apn);
+	strncpy(mod->apn, apn, sizeof(mod->apn) - 1);
+	mod->apn[sizeof(mod->apn) - 1] = '\0';
 
 	reset_unset(mod);
 	task_done(mod);

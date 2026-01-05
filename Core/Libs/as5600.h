@@ -2,13 +2,13 @@
  * AS5600 contactless potentiometer
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2025
+ * 2025-2026
  */
 
 #ifndef AS5600_H_
 #define AS5600_H_
 
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 typedef void (*as5600_hw_init)(void);
 

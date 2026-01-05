@@ -2,7 +2,7 @@
  * SIM800L library
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #ifndef SIM800L_H_
@@ -10,7 +10,7 @@
 
 #include <stdbool.h>
 
-#include "stm32f1xx_hal.h"
+#include "stm32f4xx_hal.h"
 
 #include "cmsis_os.h"
 #include "queue.h"

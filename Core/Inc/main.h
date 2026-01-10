@@ -62,8 +62,9 @@ void usb_cdc_tx_callback(void);
 /* Private defines -----------------------------------------------------------*/
 #define LED_DB_Pin GPIO_PIN_13
 #define LED_DB_GPIO_Port GPIOC
-#define HALL_OUT_Pin GPIO_PIN_0
-#define HALL_OUT_GPIO_Port GPIOA
+#define EXTI0_HALL_Pin GPIO_PIN_0
+#define EXTI0_HALL_GPIO_Port GPIOA
+#define EXTI0_HALL_EXTI_IRQn EXTI0_IRQn
 #define BTN_MB_Pin GPIO_PIN_4
 #define BTN_MB_GPIO_Port GPIOA
 #define HALL_EN_Pin GPIO_PIN_7

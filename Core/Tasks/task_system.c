@@ -95,13 +95,15 @@ static void task(void *argument)
 	TickType_t ticks = xTaskGetTickCount();
 	struct system *sys = argument;
 
-	info_base(sys);
+	/* todo: fix me */
+//	info_base(sys);
 
 	for (;;)
 	{
 		if ((xTaskGetTickCount() - ticks) >= pdMS_TO_TICKS(20000))
 		{
 			ticks = xTaskGetTickCount();
+			info_base(sys);
 			info_mem();
 		}
 

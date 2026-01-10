@@ -2,7 +2,7 @@
  * Application task
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #include "ptasks.h"
@@ -93,9 +93,9 @@ static void netscan_callback(int status, void *data)
 static void blink(void)
 {
 	osDelay(100);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED_MB_GPIO_Port, LED_MB_Pin, GPIO_PIN_RESET);
 	osDelay(100);
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(LED_MB_GPIO_Port, LED_MB_Pin, GPIO_PIN_SET);
 }
 
 // https://github.com/zserge/jsmn/blob/master/example/simple.c

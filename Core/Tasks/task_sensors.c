@@ -55,6 +55,8 @@ static void set_angle_offset(params_t *params, int32_t angle)
 	memcpy(&uparams, params, sizeof(uparams));
 	uparams.offset_angle = angle;
 
+	/* todo: log offset angle value */
+
 	osDelay(500);
 	vTaskSuspendAll();
 	params_set(&uparams);

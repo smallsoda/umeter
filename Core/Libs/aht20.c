@@ -2,7 +2,7 @@
  * AHT20 humidity and temperature sensor
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #include "aht20.h"
@@ -34,12 +34,12 @@ static const uint8_t cmd_meas[] = {0xAC, 0x33, 0x00};
 inline static void power_off(struct aht20 *sen)
 {
 	HAL_I2C_DeInit(sen->i2c);
-	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_RESET);
 }
 
 inline static void power_on(struct aht20 *sen)
 {
-	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(sen->pwr_port, sen->pwr_pin, GPIO_PIN_SET);
 	osDelay(100); // 40
 	sen->hw_init();
 }

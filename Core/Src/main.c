@@ -199,7 +199,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	if (!init_done)
 		return;
 
-	if (GPIO_Pin == HALL_OUT_Pin)
+	if (GPIO_Pin == EXTI0_HALL_Pin)
 	{
 		counter_irq(&cnt);
 	}
@@ -305,6 +305,11 @@ int main(void)
   params_init();
   params_get(&params);
 
+  /* todo */
+  // SIM800L power
+  HAL_GPIO_WritePin(MDM_EN_PRE_GPIO_Port, MDM_EN_PRE_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(MDM_EN_GPIO_Port, MDM_EN_Pin, GPIO_PIN_SET);
+
   //
   memset(&actual, 0, sizeof(actual));
   actual.mutex = xSemaphoreCreateMutex();
@@ -318,7 +323,7 @@ int main(void)
 
   //
   button_init(&btn, BTN_MB_GPIO_Port, BTN_MB_Pin, btn_callback);
-  siface_init(&siface, 16, appiface, &appif);
+  siface_init(&siface, 32, appiface, &appif);
   logger_init(&logger, &siface);
   w25q_s_init(&mem, &hspi2, SPI2_CS_GPIO_Port, SPI2_CS_Pin);
   sim800l_init(&mod, &huart2, MDM_RST_GPIO_Port, MDM_RST_Pin, params.apn);
@@ -770,8 +775,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED_DB_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : HALL_OUT_Pin BTN_MB_Pin CHRG_OK_Pin CHRG_STAT_Pin */
-  GPIO_InitStruct.Pin = HALL_OUT_Pin|BTN_MB_Pin|CHRG_OK_Pin|CHRG_STAT_Pin;
+  /*Configure GPIO pin : EXTI0_HALL_Pin */
+  GPIO_InitStruct.Pin = EXTI0_HALL_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(EXTI0_HALL_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : BTN_MB_Pin CHRG_OK_Pin CHRG_STAT_Pin */
+  GPIO_InitStruct.Pin = BTN_MB_Pin|CHRG_OK_Pin|CHRG_STAT_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -791,6 +802,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
 /* USER CODE END MX_GPIO_Init_2 */
@@ -818,14 +833,7 @@ void task_default(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
-
-    HAL_GPIO_TogglePin(EXT_WDG_GPIO_Port, EXT_WDG_Pin);
-
     HAL_GPIO_TogglePin(LED_DB_GPIO_Port, LED_DB_Pin);
-    osDelay(200);
-
-    HAL_GPIO_TogglePin(LED_MB_GPIO_Port, LED_MB_Pin);
     osDelay(200);
   }
   /* USER CODE END 5 */

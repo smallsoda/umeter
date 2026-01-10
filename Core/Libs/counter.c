@@ -2,7 +2,7 @@
  * Pulse counter
  *
  * Dmitry Proshutinsky <dproshutinsky@gmail.com>
- * 2024-2025
+ * 2024-2026
  */
 
 #include "counter.h"
@@ -30,13 +30,13 @@ void counter_irq(struct counter *cnt)
 /******************************************************************************/
 void counter_power_on(struct counter *cnt)
 {
-	HAL_GPIO_WritePin(cnt->pwr_port, cnt->pwr_pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(cnt->pwr_port, cnt->pwr_pin, GPIO_PIN_SET);
 }
 
 /******************************************************************************/
 void counter_power_off(struct counter *cnt)
 {
-	HAL_GPIO_WritePin(cnt->pwr_port, cnt->pwr_pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(cnt->pwr_port, cnt->pwr_pin, GPIO_PIN_RESET);
 }
 
 /******************************************************************************/
